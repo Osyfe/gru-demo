@@ -1,0 +1,38 @@
+[package]
+name = "opengl"
+version = "0.1.0"
+authors = ["Jannik Fehre"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "opengl_desktop"
+path = "src/main.rs"
+
+[dependencies]
+gru-opengl = { path = "../../gru-opengl" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.73"
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-glue = "0.2.1"
+
+[package.metadata.android]
+apk_label = "opengl"
+min_sdk_version = "16"
+target_sdk_version = "26"
+fullscreen = true
+orientation = "sensorLandscape"
+
+[[package.metadata.android.uses_feature]]
+glEsVersion = 0x00020000
+
+[package.metadata.android.application]
+debuggable = false
+theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+#icon = "@mipmap/ic_launcher"
+# res = "path/to/res_folder"
+# assets = "path/to/assets_folder"
+build_targets = [ "armv7-linux-androideabi", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android" ]

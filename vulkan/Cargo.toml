@@ -1,0 +1,11 @@
+[package]
+name = "vulkan"
+version = "0.1.0"
+authors = ["Jannik Fehre"]
+edition = "2018"
+
+[dependencies]
+gru-vulkan = { path = "../../gru-vulkan" }
+gru-misc = { path = "../../gru-misc" }
+winit = "0.24.0"
+image = "0.23.12"
