@@ -1,2 +1,2 @@
 [workspace]
-members = ["opengl", "vulkan"]
+members = ["gru-opengl-demo", "gru-vulkan-demo"]
