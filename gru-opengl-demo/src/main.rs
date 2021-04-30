@@ -1,6 +1,6 @@
 //no console
 //#![windows_subsystem = "windows"]
 
-mod app;
+mod prog;
 
-pub fn main() { gru_opengl::start::<app::Test>(); }
+pub fn main() { gru_opengl::start::<prog::Demo>(); }
