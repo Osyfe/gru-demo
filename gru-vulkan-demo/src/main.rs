@@ -61,7 +61,7 @@ fn main()
     let graphic_command_pool = device.new_command_pool(graphic_queue_family);
     //let transfer_command_pool = device.new_command_pool(transfer_queue_family);
     //font setup
-    let font = Font::from(include_bytes!("res/futuram.ttf"));
+    let font = Font::new(include_bytes!("res/futuram.ttf"));
     let chars = &Font::all_letters() | &Font::text_special_characters();
     let (atlas_data, atlas) = Atlas::new(&font, &chars, 200.0, ATLAS_SIZE, 5);
     /*
@@ -358,7 +358,7 @@ impl Camera
 
     fn build_projection(&mut self, aspect: f32)
     {
-        self.proj = Mat4::perspective(aspect, std::f32::consts::FRAC_PI_8, 0.1, 100.0);
+        self.proj = Mat4::perspective_vulkan(aspect, std::f32::consts::FRAC_PI_8, 0.1, 100.0);
     }
 
     fn walk(&mut self, dt: f32)

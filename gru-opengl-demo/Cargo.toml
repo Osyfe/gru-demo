@@ -14,6 +14,8 @@ path = "src/main.rs"
 [dependencies]
 gru-opengl = { path = "../../gru-opengl" }
 gru-math = { path = "../../gru-misc/gru-math" }
+gru-text = { path = "../../gru-misc/gru-text" }
+
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.73"
