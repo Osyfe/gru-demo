@@ -1,131 +1,63 @@
+use std::collections::HashSet;
 use gru_opengl::*;
 use gru_math::*;
 use gru_text::*;
 
+mod text;
+mod cube;
+use text::*;
+use cube::*;
+
 const FRAMEBUFFER_SIZE: u32 = 1024;
-const ATLAS_SIZE: u32 = 1024;
-const MAX_CHARS: u32 = 60;
+const TARGET_ROT: Vec3 = Vec3(0.5, 0.5, 0.5);
 
-const fn cube() -> ([u16; 36], [CubeVertex; 24])
+struct TextData
 {
-    let indices =
-    [
-        /*
-        2, 6, 4, 4, 0, 2, //f
-        7, 3, 1, 1, 5, 7, //b
-        3, 2, 0, 0, 1, 3, //l
-        6, 7, 5, 5, 4, 6, //r
-        0, 4, 5, 5, 1, 0, //u
-        3, 7, 6, 6, 2, 3  //d
-        */
-        0, 1, 3, 3, 2, 0, //l
-        4, 6, 7, 7, 5, 4, //r
-        8, 9, 11, 11, 10, 8, //f
-        12, 14, 15, 15, 13, 12, //b
-        16, 18, 19, 19, 17, 16, //u
-        20, 21, 23, 23, 22, 20 //d
-    ];
-    let vertices =
-    [
-        /*
-        CubeVertex { position: [-1.0, -1.0, -1.0], color: [0.0, 0.0, 0.0] }, // luf 0
-        CubeVertex { position: [-1.0, -1.0, 1.0], color: [0.0, 0.0, 1.0] }, // lub 1
-        CubeVertex { position: [-1.0, 1.0, -1.0], color: [0.0, 1.0, 0.0] }, // ldf 2
-        CubeVertex { position: [-1.0, 1.0, 1.0], color: [0.0, 1.0, 1.0] }, // ldb 3
-        CubeVertex { position: [1.0, -1.0, -1.0], color: [1.0, 0.0, 0.0] }, // ruf 4
-        CubeVertex { position: [1.0, -1.0, 1.0], color: [1.0, 0.0, 1.0] }, // rub 5
-        CubeVertex { position: [1.0, 1.0, -1.0], color: [1.0, 1.0, 0.0] }, // rdf 6
-        CubeVertex { position: [1.0, 1.0, 1.0], color: [1.0, 1.0, 1.0] }  // rdb 7
-        */ 
-        //Left
-        CubeVertex { position: [-1.0, -1.0, -1.0], color: [0.0, 0.0, 0.0], tex_coords: [0.0, 0.0] }, //0 luf 0  
-        CubeVertex { position: [-1.0, -1.0, 1.0], color: [0.0, 0.0, 1.0], tex_coords: [1.0, 0.0] }, //1 lub 1
-        CubeVertex { position: [-1.0, 1.0, -1.0], color: [0.0, 1.0, 0.0], tex_coords: [0.0, 1.0] }, //2 ldf 2
-        CubeVertex { position: [-1.0, 1.0, 1.0], color: [0.0, 1.0, 1.0], tex_coords: [1.0, 1.0] }, //3 ldb 3
-        //Right
-        CubeVertex { position: [1.0, -1.0, -1.0], color: [1.0, 0.0, 0.0], tex_coords: [0.0, 0.0] }, //4 ruf 4
-        CubeVertex { position: [1.0, -1.0, 1.0], color: [1.0, 0.0, 1.0], tex_coords: [0.0, 1.0] }, //5 rub 5
-        CubeVertex { position: [1.0, 1.0, -1.0], color: [1.0, 1.0, 0.0], tex_coords: [1.0, 0.0] }, //6 rdf 6
-        CubeVertex { position: [1.0, 1.0, 1.0], color: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] },  //7 rdb 7
-        //Front
-        CubeVertex { position: [-1.0, -1.0, -1.0], color: [0.0, 0.0, 0.0], tex_coords: [0.0, 0.0] }, //8 luf 0
-        CubeVertex { position: [-1.0, 1.0, -1.0], color: [0.0, 1.0, 0.0], tex_coords: [1.0, 0.0] }, //9 ldf 2
-        CubeVertex { position: [1.0, -1.0, -1.0], color: [1.0, 0.0, 0.0], tex_coords: [0.0, 1.0] }, //10 ruf 4
-        CubeVertex { position: [1.0, 1.0, -1.0], color: [1.0, 1.0, 0.0], tex_coords: [1.0, 1.0] }, //11 rdf 6
-        //Back
-        CubeVertex { position: [-1.0, -1.0, 1.0], color: [0.0, 0.0, 1.0], tex_coords: [0.0, 0.0] }, //12 lub 1
-        CubeVertex { position: [-1.0, 1.0, 1.0], color: [0.0, 1.0, 1.0], tex_coords: [0.0, 1.0] }, //13 ldb 3
-        CubeVertex { position: [1.0, -1.0, 1.0], color: [1.0, 0.0, 1.0], tex_coords: [1.0, 0.0] }, //14 rub 5
-        CubeVertex { position: [1.0, 1.0, 1.0], color: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] } , //15 rdb 7
-        //Up
-        CubeVertex { position: [-1.0, -1.0, -1.0], color: [0.0, 0.0, 0.0], tex_coords: [0.0, 0.0] }, //16 luf 0
-        CubeVertex { position: [-1.0, -1.0, 1.0], color: [0.0, 0.0, 1.0], tex_coords: [0.0, 1.0] }, //17 lub 1
-        CubeVertex { position: [1.0, -1.0, -1.0], color: [1.0, 0.0, 0.0], tex_coords: [1.0, 0.0] }, //18 ruf 4
-        CubeVertex { position: [1.0, -1.0, 1.0], color: [1.0, 0.0, 1.0], tex_coords: [1.0, 1.0] }, //19 rub 5
-        //Down
-        CubeVertex { position: [-1.0, 1.0, -1.0], color: [0.0, 1.0, 0.0], tex_coords: [0.0, 0.0] }, //20 ldf 2
-        CubeVertex { position: [-1.0, 1.0, 1.0], color: [0.0, 1.0, 1.0], tex_coords: [1.0, 0.0] }, //21 ldb 3
-        CubeVertex { position: [1.0, 1.0, -1.0], color: [1.0, 1.0, 0.0], tex_coords: [0.0, 1.0] }, //22 rdf 6
-        CubeVertex { position: [1.0, 1.0, 1.0], color: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] }  //23 rdb 7
-    ];
-    (indices, vertices)
+    shader: Shader,
+    vertices: VertexBuffer<GlyphVertex>,
+    indices: IndexBuffer,
+    text: Text,
+    index_count: u32,
+    height_key: UniformKey,
+    atlas_key: UniformKey
 }
 
-#[repr(C, packed)]
-pub struct GlyphVertex
+struct CubeData
 {
-    position: [f32; 2],
-    tex_coords: [f32; 2]
+    shader: Shader,
+    vertices: VertexBuffer<CubeVertex>,
+    indices: IndexBuffer,
+    mat_key: UniformKey,
+    tex_key: UniformKey
 }
 
-impl AttributesReprCpacked for GlyphVertex
+struct AtlasData
 {
-    const ATTRIBUTES: &'static [(BufferType, &'static str)] =
-    &[
-        (BufferType::Float { size: 2 }, "position"),
-        (BufferType::Float { size: 2 }, "tex_coords")
-    ];
-}
-
-#[repr(C, packed)]
-pub struct CubeVertex
-{
-    position: [f32; 3],
-    color: [f32; 3],
-    tex_coords: [f32; 2],
-}
-
-impl AttributesReprCpacked for CubeVertex
-{
-    const ATTRIBUTES: &'static [(BufferType, &'static str)] =
-    &[
-        (BufferType::Float { size: 3 }, "position"),
-        (BufferType::Float { size: 3 }, "color"),
-        (BufferType::Float { size: 2 }, "tex_coords")
-    ];
+    atlas: Atlas,
+    texture: Texture
 }
 
 pub struct Demo
 {
-    t: f32,
-    text_shader: Shader,
-    text_vertices: VertexBuffer<GlyphVertex>,
-    text_indices: IndexBuffer,
-    cube_shader: Shader,
-    cube_vertices: VertexBuffer<CubeVertex>,
-    cube_indices: IndexBuffer,
-    atlas: Atlas,
-    atlas_texture: Texture,
-    framebuffer: Framebuffer
+    text: TextData,
+    cube: CubeData,
+    atlas: AtlasData,
+    framebuffer: Framebuffer,
+    rot: Rotor,
+    vel: Vec3
 }
 
 impl App for Demo
 {
 	fn init(gl: &mut Gl) -> Self
 	{
+        let max_chars = TEXTS.iter().map(|text| text.chars().count() as u32).max().unwrap();
+
         let text_shader = gl.new_shader(include_str!("../glsl/text.vert"), include_str!("../glsl/text.frag"));
-        let text_vertices = gl.new_vertex_buffer(MAX_CHARS * 4, BufferAccess::DYNAMIC);
-        let text_indices = gl.new_index_buffer(MAX_CHARS * 6, BufferAccess::DYNAMIC);
+        let text_vertices = gl.new_vertex_buffer(max_chars * 4, BufferAccess::DYNAMIC);
+        let text_indices = gl.new_index_buffer(max_chars * 6, BufferAccess::DYNAMIC);
+        let height_key = text_shader.get_key("height").unwrap().clone();
+        let atlas_key = text_shader.get_key("atlas").unwrap().clone();
 
         let cube_shader = gl.new_shader(include_str!("../glsl/cube.vert"), include_str!("../glsl/cube.frag"));
         let (indices, vertices) = cube();
@@ -133,59 +65,100 @@ impl App for Demo
         cube_vertices.data(0, &vertices);
         let mut cube_indices = gl.new_index_buffer(indices.len() as u32, BufferAccess::STATIC);
         cube_indices.data(0, &indices);   
+        let mat_key = cube_shader.get_key("mat").unwrap().clone();
+        let tex_key = cube_shader.get_key("tex").unwrap().clone();
 
+        let mut alphabet = HashSet::new();
+        for text in &TEXTS { for c in text.chars() { if c != ' ' { alphabet.insert(c); } } }
         let font = Font::new(include_bytes!("../res/futuram.ttf"));
-        let (font_texture, atlas) = Atlas::new(&font, &Font::all_letters(), 100.0, ATLAS_SIZE, 5);
+        let (font_texture, atlas) = Atlas::new(&font, &alphabet, 100.0, ATLAS_SIZE, 5);
         if font_texture.len() > 1 { panic!("Atlas more than one page"); }
         let atlas_texture = gl.new_texture(&TextureConfig { size: ATLAS_SIZE, channel: TextureChannel::A, mipmap: false, wrap: TextureWrap::Repeat}, &font_texture[0]);
 
         let framebuffer = gl.new_framebuffer(&FramebufferConfig { depth: false, size: FRAMEBUFFER_SIZE, wrap: TextureWrap::Clamp });
 
-		Self { t: 0.0, text_shader, text_vertices, text_indices, cube_shader, cube_vertices, cube_indices, atlas, atlas_texture, framebuffer }
+		Self
+        {
+            text: TextData
+            {
+                shader: text_shader,
+                vertices: text_vertices, indices: text_indices,
+                text: Text::None, index_count: 0,
+                height_key, atlas_key
+            },
+            cube: CubeData
+            {
+                shader: cube_shader,
+                vertices: cube_vertices, indices: cube_indices,
+                mat_key, tex_key
+            },
+            atlas: AtlasData
+            {
+                atlas,
+                texture: atlas_texture
+            },
+            framebuffer,
+            rot: Rotor::identity(),
+            vel: TARGET_ROT
+        }
 	}
 
     fn input(&mut self, event: event::Event)
     {
+        use event::*;
+        match event
+        {
+            Event::Click { .. } =>
+            {
+                self.vel += Vec3(5.0, 0.0, 0.0);
+            },
+            _ => {}
+        }
     }
 
     fn frame(&mut self, dt: f32, gl: &mut Gl, window_dims: (u32, u32)) -> bool
     {
-        self.t += dt;
+        //physic
+        self.vel += (TARGET_ROT - self.vel) * dt;
+        self.rot = Rotor::from_axis(self.vel * dt) * self.rot;
+        //text
+        let current_text = Text::Hello;
+        let (text, num_lines) = current_text.get();
+        if current_text != self.text.text
+        {
+            let mut vertices = Vec::with_capacity(text.len() * 4);
+            let mut indices = Vec::with_capacity(text.len() * 6);
+            let text_data = self.atlas.atlas.text
+            (
+                text,
+                num_lines,
+                Align::Center,
+                &mut |index| indices.push(index as u16),
+                &mut |(s, t, _), (x, y)| vertices.push(GlyphVertex { position: [x, -y], tex_coords: [s, t] })
+            );
+            self.text.vertices.data(0, &vertices);
+            self.text.indices.data(0, &indices);
+            self.text.text = current_text;
+            self.text.index_count = text_data.index_count;
 
-        println!();
-        let text = "Hello Cube";
-        let mut vertices = Vec::with_capacity(text.len() * 4);
-        let mut indices = Vec::with_capacity(text.len() * 6);
-        let num_lines = 2.0;
-        let text_data = self.atlas.text
-        (
-            text,
-            num_lines,
-            Align::Center,
-            &mut |index| indices.push(index as u16),
-            &mut |(s, t, _), (x, y)| vertices.push(GlyphVertex { position: [x, -y], tex_coords: [s, t] })
-        );
-        self.text_vertices.data(0, &vertices);
-        self.text_indices.data(0, &indices);
-
-        gl
-            .render_pass(Some(&mut self.framebuffer), RenderPassInfo { clear_color: Some((1.0, 1.0, 1.0)), clear_depth: false })
-            .pipeline(&self.text_shader, PipelineInfo { depth_test: false, alpha_blend: true, face_cull: true })
-            .uniform_f1("height", 2.0 / num_lines)
-            .uniform_texture("atlas", &self.atlas_texture, false)
-            .draw(&self.text_vertices, Some(&self.text_indices), 0, text_data.index_count);
-
-        let z = -(self.t.sin() / 2.0 * 9.0 * 1.0 + 5.5);
+            gl
+                .render_pass(RenderTarget::Texture(&mut self.framebuffer), RenderPassInfo { clear_color: Some((0.0, 0.0, 0.0)), clear_depth: false })
+                .pipeline(&self.text.shader, PipelineInfo { depth_test: false, alpha_blend: false, face_cull: true })
+                .uniform_f1(&self.text.height_key, 2.0 / num_lines)
+                .uniform_texture(&self.text.atlas_key, &self.atlas.texture, false)
+                .draw(&self.text.vertices, Some(&self.text.indices), 0, self.text.index_count);
+        } 
+        //cube
         let mat = 
-            Mat4::perspective_opengl(window_dims.0 as f32 / window_dims.1 as f32, std::f32::consts::FRAC_PI_8, 1.0, 10.0)
-          * Mat4::translation_z(-8.0)
-          * Mat4::rotation(Vec3(1.0, 1.0, 1.0).unit(), self.t);
+            Mat4::perspective_opengl(window_dims.0 as f32 / window_dims.1 as f32, std::f32::consts::FRAC_PI_8, 7.0, 10.0)
+          * Mat4::translation_z(-9.0)
+          * self.rot.to_mat4();
         gl
-            .render_pass(None, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true })
-            .pipeline(&self.cube_shader, PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
-            .uniform_mat4("mat", mat)
-            .uniform_texture("tex", self.framebuffer.texture(), false)
-            .draw(&self.cube_vertices, Some(&self.cube_indices), 0, 36);
+            .render_pass(RenderTarget::Screen, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true })
+            .pipeline(&self.cube.shader, PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
+            .uniform_mat4(&self.cube.mat_key, mat)
+            .uniform_texture(&self.cube.tex_key, self.framebuffer.texture(), false)
+            .draw(&self.cube.vertices, Some(&self.cube.indices), 0, 36);
         true
     }
 }

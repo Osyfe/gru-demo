@@ -1,1 +1,5 @@
-full featured "best practice" demos
+opengl:
+	-file loading
+
+vulkan:
+	-konzept (grundstrkutur von heldenkampf übernehmen), dann weiterschauen

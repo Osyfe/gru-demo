@@ -41,7 +41,7 @@ fn main()
     //window setup
     let mut event_loop = event_loop::EventLoop::new();
     let window = window::WindowBuilder::new()
-        .with_title("Osyfe Demo")
+        .with_title("gru-vulkan demo")
         .with_inner_size(dpi::PhysicalSize { width: 512.0, height: 512.0 })
         .with_visible(false)
         .with_resizable(true)
