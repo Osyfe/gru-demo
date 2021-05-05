@@ -37,6 +37,12 @@ struct AtlasData
     texture: Texture
 }
 
+struct InputData
+{
+    last_pos: (f32, f32),
+    mouse_down: bool
+}
+
 pub struct Demo
 {
     text: TextData,
@@ -44,7 +50,8 @@ pub struct Demo
     atlas: AtlasData,
     framebuffer: Framebuffer,
     rot: Rotor,
-    vel: Vec3
+    vel: Vec3,
+    input: InputData
 }
 
 impl App for Demo
@@ -77,6 +84,12 @@ impl App for Demo
 
         let framebuffer = gl.new_framebuffer(&FramebufferConfig { depth: false, size: FRAMEBUFFER_SIZE, wrap: TextureWrap::Clamp });
 
+        let input = InputData
+        {
+            last_pos: (0.0, 0.0),
+            mouse_down: false
+        };
+
 		Self
         {
             text: TextData
@@ -99,7 +112,8 @@ impl App for Demo
             },
             framebuffer,
             rot: Rotor::identity(),
-            vel: TARGET_ROT
+            vel: TARGET_ROT,
+            input
         }
 	}
 
@@ -108,10 +122,34 @@ impl App for Demo
         use event::*;
         match event
         {
-            Event::Click { .. } =>
+            Event::Click { button: MouseButton::Left, state } =>
             {
-                self.vel += Vec3(5.0, 0.0, 0.0);
+                self.input.mouse_down = state == ElementState::Pressed
             },
+            Event::Cursor { position } =>
+            {
+                let (x, y) = position;
+                let (x2, y2) = self.input.last_pos;
+                if self.input.mouse_down
+                {
+                    let diff = Vec3(y2 - y, x - x2, 0.0);
+                    let vel = 0.005 * diff.norm().sqrt() + 0.005;
+                    self.vel += diff * vel;
+                }
+                self.input.last_pos = position;
+            },
+            Event::Touch { position, phase, .. } =>
+            {
+                let (x, y) = position;
+                if let TouchPhase::Moved = phase
+                {
+                    let (x2, y2) = self.input.last_pos;
+                    let diff = Vec3(y2 - y, x - x2, 0.0);
+                    let vel = 0.005 * diff.norm().sqrt() + 0.005;
+                    self.vel += diff * vel;
+                }
+                self.input.last_pos = position;
+            }
             _ => {}
         }
     }

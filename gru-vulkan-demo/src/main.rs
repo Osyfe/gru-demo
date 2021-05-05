@@ -47,7 +47,7 @@ fn main()
         .with_resizable(true)
         .build(&event_loop).unwrap();
     //initialization and queue fetching
-    let instance = Instance::new(&window);
+    let instance = Instance::new(Some(&window));
     let physical_devices = instance.physical_devices();
     let geforce = &physical_devices[0];
     let graphic_queue_family_info = &geforce.queue_families()[0];
