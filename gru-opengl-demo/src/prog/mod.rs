@@ -1,15 +1,21 @@
-use std::collections::HashSet;
-use gru_opengl::*;
+use std::collections::{HashSet, HashMap};
+use gru_opengl::{App, Context, gl::*, event};
 use gru_math::*;
 use gru_text::*;
+use rodio::{Decoder, OutputStream, OutputStreamHandle, source::{Source}, buffer::SamplesBuffer};
 
 mod text;
 mod cube;
+mod slice;
 use text::*;
 use cube::*;
+use slice::*;
 
 const FRAMEBUFFER_SIZE: u32 = 1024;
 const TARGET_ROT: Vec3 = Vec3(0.5, 0.5, 0.5);
+const ACC: f32 = 0.003;
+const WEH_VEL: f32 = 10.0;
+const SOUND_COOLDOWN: f32 = 0.5;
 
 struct TextData
 {
@@ -43,21 +49,40 @@ struct InputData
     mouse_down: bool
 }
 
+struct SoundData
+{
+    device: Option<(OutputStream, OutputStreamHandle)>, //web need to waite for input
+    map: HashMap<String, (u16, u32, Vec<f32>)>,
+    cooldown_eh: f32,
+    cooldown_weh: f32
+}
+
 pub struct Demo
 {
+    run_id: u64,
     text: TextData,
     cube: CubeData,
     atlas: AtlasData,
     framebuffer: Framebuffer,
     rot: Rotor,
     vel: Vec3,
-    input: InputData
+    input: InputData,
+    sound: SoundData
 }
 
 impl App for Demo
 {
-	fn init(gl: &mut Gl) -> Self
+	fn init(ctx: &mut Context) -> Self
 	{
+        let run_id = match ctx.storage.get("ID")
+        {
+            Some(id) => id.parse().unwrap(),
+            None => 0
+        };
+        gru_opengl::log(&format!("run_id = {}", run_id));
+
+        let gl = &mut ctx.gl;
+
         let max_chars = TEXTS.iter().map(|text| text.chars().count() as u32).max().unwrap();
 
         let text_shader = gl.new_shader(include_str!("../glsl/text.vert"), include_str!("../glsl/text.frag"));
@@ -90,8 +115,20 @@ impl App for Demo
             mouse_down: false
         };
 
+        let sound = SoundData
+        {
+            device: None,
+            map: HashMap::new(),
+            cooldown_eh: 0.0,
+            cooldown_weh: 0.0
+        };
+
+        ctx.load_file("eh.ogg");
+        ctx.load_file("weh.ogg");
+
 		Self
         {
+            run_id,
             text: TextData
             {
                 shader: text_shader,
@@ -113,19 +150,40 @@ impl App for Demo
             framebuffer,
             rot: Rotor::identity(),
             vel: TARGET_ROT,
-            input
+            input,
+            sound
         }
 	}
 
-    fn input(&mut self, event: event::Event)
+    fn input(&mut self, _ctx: &mut Context, event: event::Event)
     {
+        fn init_audio(sound: &mut SoundData)
+        {
+            if sound.device.is_none()
+            {
+                gru_opengl::log("init audio");
+                sound.device = Some(OutputStream::try_default().unwrap());
+            }
+        }
         use event::*;
+        let mut sound = None;
         match event
         {
             Event::Click { button: MouseButton::Left, state } =>
             {
-                self.input.mouse_down = state == ElementState::Pressed
-            },
+                init_audio(&mut self.sound);
+                self.input.mouse_down = state == ElementState::Pressed;
+                if self.input.mouse_down && self.sound.cooldown_eh <= 0.0
+                {
+                    self.sound.cooldown_eh = SOUND_COOLDOWN;
+                    sound = Some("eh.ogg");
+                }
+                if !self.input.mouse_down && self.vel.norm() > WEH_VEL && self.sound.cooldown_weh <= 0.0
+                {
+                    self.sound.cooldown_weh = SOUND_COOLDOWN;
+                    sound = Some("weh.ogg");
+                }
+            }
             Event::Cursor { position } =>
             {
                 let (x, y) = position;
@@ -133,7 +191,7 @@ impl App for Demo
                 if self.input.mouse_down
                 {
                     let diff = Vec3(y2 - y, x - x2, 0.0);
-                    let vel = 0.005 * diff.norm().sqrt() + 0.005;
+                    let vel = ACC * diff.norm().sqrt() + ACC;
                     self.vel += diff * vel;
                 }
                 self.input.last_pos = position;
@@ -141,26 +199,64 @@ impl App for Demo
             Event::Touch { position, phase, .. } =>
             {
                 let (x, y) = position;
-                if let TouchPhase::Moved = phase
+                match phase
                 {
-                    let (x2, y2) = self.input.last_pos;
-                    let diff = Vec3(y2 - y, x - x2, 0.0);
-                    let vel = 0.005 * diff.norm().sqrt() + 0.005;
-                    self.vel += diff * vel;
+                    TouchPhase::Moved =>
+                    {
+                        let (x2, y2) = self.input.last_pos;
+                        let diff = Vec3(y2 - y, x - x2, 0.0);
+                        let vel = ACC * diff.norm().sqrt() + ACC;
+                        self.vel += diff * vel;
+                    },
+                    TouchPhase::Ended => if self.vel.norm() > WEH_VEL && self.sound.cooldown_weh <= 0.0
+                    {
+                        self.sound.cooldown_weh = SOUND_COOLDOWN;
+                        sound = Some("weh.ogg");
+                    },
+                    TouchPhase::Started => if self.sound.cooldown_eh <= 0.0
+                    {
+                        init_audio(&mut self.sound);
+                        self.sound.cooldown_eh = SOUND_COOLDOWN;
+                        sound = Some("eh.ogg")
+                    },
+                    TouchPhase::Cancelled => {}
                 }
                 self.input.last_pos = position;
+            },
+            Event::File(name, data) =>
+            {
+                let decoder = Decoder::new_vorbis(SliceReadSeek::new(&data)).unwrap();
+                let (channels, sample_rate) = (decoder.channels(), decoder.sample_rate());
+                let data = decoder.convert_samples::<f32>().collect::<Vec<_>>();
+                self.sound.map.insert(name, (channels, sample_rate, data));
             }
             _ => {}
         }
+        if let Some(name) = sound
+        {
+            if let Some((channels, sample_rate, data)) = self.sound.map.get(name)
+            {
+                if let Some(device) = &self.sound.device
+                {
+                    let buffer = SamplesBuffer::new(*channels, *sample_rate, data.clone());
+                    device.1.play_raw(buffer).unwrap();
+                }
+            }
+        }
     }
 
-    fn frame(&mut self, dt: f32, gl: &mut Gl, window_dims: (u32, u32)) -> bool
+    fn frame(&mut self, ctx: &mut Context, dt: f32, window_dims: (u32, u32)) -> bool
     {
+        self.sound.cooldown_eh -= dt;
+        self.sound.cooldown_weh -= dt;
+
+        let gl = &mut ctx.gl;
         //physic
         self.vel += (TARGET_ROT - self.vel) * dt;
         self.rot = Rotor::from_axis(self.vel * dt) * self.rot;
+        self.rot.fix();
         //text
-        let current_text = Text::Hello;
+        let current_text = if self.vel.norm() > WEH_VEL { Text::Wuhu } else { Text::Hello };
         let (text, num_lines) = current_text.get();
         if current_text != self.text.text
         {
@@ -198,5 +294,10 @@ impl App for Demo
             .uniform_texture(&self.cube.tex_key, self.framebuffer.texture(), false)
             .draw(&self.cube.vertices, Some(&self.cube.indices), 0, 36);
         true
+    }
+
+    fn deinit(self, ctx: &mut Context)
+    {
+        ctx.storage.set("ID", Some(&format!("{}", self.run_id + 1)));
     }
 }

@@ -1,4 +1,4 @@
-use gru_opengl::{AttributesReprCpacked, BufferType};
+use gru_opengl::gl::{AttributesReprCpacked, BufferType};
 
 pub const fn cube() -> ([u16; 36], [CubeVertex; 24])
 {

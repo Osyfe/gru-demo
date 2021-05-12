@@ -1,5 +1,5 @@
 [package]
-name = "gru-opengl-demo"
+name = "gru-opengl-demo" # rust.name = android application id
 version = "0.1.0"
 authors = ["Jannik Fehre"]
 edition = "2018"
@@ -16,39 +16,43 @@ gru-opengl = { path = "../../gru-opengl" }
 gru-math = { path = "../../gru-misc/gru-math" }
 gru-text = { path = "../../gru-misc/gru-text" }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rodio = { version = "0.13.1", default-features = false, features = ["vorbis"] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.73"
-[target.'cfg(target_os = "android")'.dependencies]
-ndk-glue = "0.2.1"
+rodio = { version = "0.13.1", default-features = false, features = ["vorbis", "wasm-bindgen"] }
 
-[profile.release]
-lto = true
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-glue = "0.3.0"
 
 # Android.xml, quite broken for some entries...
 
 [package.metadata.android]
-label = "opengl"
-package_name = "gru.opengl.demo"
-
-android_version = "26"
-target_sdk_version = "26"
-min_sdk_version = "18"
-
 build_targets = [ "armv7-linux-androideabi", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android" ]
-
-opengles_version_major = 2
-opengles_version_minor = 0
+resources = "src/android_res"
+assets = "export/data"
 
 fullscreen = true
 orientation = "sensorLandscape"
 installLocation = "preferExternal"
 
+[[package.metadata.android.uses_feature]]
+name = "bla"
+glEsVersion = "0x00020000"
+required = true
+#<uses-feature android:glEsVersion="0x00020000" android:required="true" />
+
+[package.metadata.android.sdk]
+min_sdk_version = 18
+target_sdk_version = 26
+max_sdk_version = 26
+
 [package.metadata.android.application]
 debuggable = false
 theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
-#icon = "@mipmap/ic_launcher"
-# res = "path/to/res_folder"
-# assets = "path/to/assets_folder"
+icon = "@mipmap/icon"
+label = "Opengl" # App name
 
 [package.metadata.android.application.activity]
 config_changes = "orientation"

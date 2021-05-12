@@ -8,11 +8,17 @@ use gru_misc::
     text::*,
     time::*
 };
-use winit::*;
-use winit::event_loop::ControlFlow;
-use winit::event::VirtualKeyCode;
-use winit::event::MouseButton;
-use winit::event::ElementState;
+use winit::
+{
+    *,
+    event_loop::ControlFlow,
+    event::
+    {
+        VirtualKeyCode,
+        MouseButton,
+        ElementState
+    }
+};
 
 const ATLAS_SIZE: u32 = 1024;
 
@@ -51,8 +57,8 @@ fn main()
     let physical_devices = instance.physical_devices();
     let geforce = &physical_devices[0];
     let graphic_queue_family_info = &geforce.queue_families()[0];
-    let transfer_queue_family_info = &geforce.queue_families()[1];
-    let device = instance.logical_device(geforce, vec![(graphic_queue_family_info, vec![1.0]), (transfer_queue_family_info, vec![0.5])]);
+    //let transfer_queue_family_info = &geforce.queue_families()[1];
+    let device = instance.logical_device(geforce, vec![(graphic_queue_family_info, vec![1.0])]);//, (transfer_queue_family_info, vec![1.0])]);
     let graphic_queue_family = device.get_queue_family(graphic_queue_family_info);
     let graphic_queue_arc = graphic_queue_family.get_queue(0);
     let graphic_queue = graphic_queue_arc.lock().unwrap();
@@ -74,10 +80,13 @@ fn main()
     let atlas_image_type = ImageType { channel: ImageChannelType::RUnorm, width: ATLAS_SIZE, height: ATLAS_SIZE, layers: Some(atlas_data.len() as u32) };
     let atlas_image = device.new_image(atlas_image_type, ImageUsage::Texture { mipmapping: true });
     let mut atlas_buffer = device.new_image_buffer(atlas_image_type);
+    let mut fence = device.new_fence(false);
     for i in 0..atlas_data.len()
     {
         atlas_buffer.write(&atlas_data[i]);
-        graphic_command_pool.new_command_buffer().copy_image(&graphic_queue, &atlas_buffer, &atlas_image, i as u32, device.new_fence(false)).mark.wait();
+        let copy_fence = graphic_command_pool.new_command_buffer().copy_to_image(&graphic_queue, &atlas_buffer, &atlas_image, i as u32, fence);
+        copy_fence.mark.wait();
+        fence = copy_fence.mark;
     }
     let mut indices = Vec::new();
     let mut vertices = Vec::new();
@@ -137,8 +146,8 @@ fn main()
         //swapchain creation
         let swapchain = device.new_swapchain(old_swapchain.map(|stuff| stuff.swapchain), (width, height), true);
         //image buffers
-        let color_buffer = device.new_image(ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: None }, ImageUsage::Attachment { depth: false, samples: msaa, texture: false });
-        let depth_buffer = device.new_image(ImageType { channel: ImageChannelType::DSfloat, width, height, layers: None }, ImageUsage::Attachment { depth: true, samples: msaa, texture: false });
+        let color_buffer = device.new_image(ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: None }, ImageUsage::Attachment { depth: false, samples: msaa, texture: false, transfer_src: false });
+        let depth_buffer = device.new_image(ImageType { channel: ImageChannelType::DSfloat, width, height, layers: None }, ImageUsage::Attachment { depth: true, samples: msaa, texture: false, transfer_src: false });
         //renderpass & pipeline creation
         let render_pass = device.new_render_pass
         (

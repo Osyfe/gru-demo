@@ -1,17 +1,19 @@
-use gru_opengl::{AttributesReprCpacked, BufferType};
+use gru_opengl::gl::{AttributesReprCpacked, BufferType};
 
 pub const ATLAS_SIZE: u32 = 1024;
 
-pub const TEXTS: [&'static str; 1] =
+pub const TEXTS: [&'static str; 2] =
 [
-    "Hello Open GL"
+    "Hello Open GL",
+    "Wuu huuu"
 ];
 
 #[derive(PartialEq)]
 pub enum Text
 {
     None,
-    Hello
+    Hello,
+    Wuhu
 }
 
 impl Text
@@ -21,7 +23,8 @@ impl Text
         match self
         {
             Self::None => unreachable!(),
-            Self::Hello => (TEXTS[0], 3.0)
+            Self::Hello => (TEXTS[0], 3.0),
+            Self::Wuhu => (TEXTS[1], 2.0)
         }
     }
 }
