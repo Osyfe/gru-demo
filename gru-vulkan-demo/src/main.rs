@@ -99,14 +99,14 @@ fn main()
         &mut |c, p| vertices.push(Char { position: p.into(), coords: c.into() })
     );
     //camera setup
-    let mut buffer_layout = device.new_buffer_layout();
-    let cam_view = buffer_layout.add_uniforms(1);
-    let mut cam_buffer = device.new_buffer(&mut buffer_layout, MemoryType::CpuToGpu, TransferType::None);
+    let mut buffer_type = device.new_buffer_type();
+    let cam_view = buffer_type.add_uniforms(1);
+    let mut cam_buffer = device.new_buffer(&mut buffer_type, BufferUsage::Dynamic);
     //text setup
-    let mut buffer_layout = device.new_buffer_layout();
-    let index_view = buffer_layout.add_indices(indices.len());
-    let vertex_view = buffer_layout.add_attributes(vertices.len());
-    let mut buffer = device.new_buffer(&mut buffer_layout, MemoryType::CpuToGpu, TransferType::None);
+    let mut buffer_type = device.new_buffer_type();
+    let index_view = buffer_type.add_indices(indices.len());
+    let vertex_view = buffer_type.add_attributes(vertices.len());
+    let mut buffer = device.new_buffer(&mut buffer_type, BufferUsage::Dynamic);
     //buffer filling
     {
         let mut map = buffer.map();
@@ -136,7 +136,7 @@ fn main()
         DescriptorBindingInfo::from_struct::<CamBinding>(1, true, false), //binding 0
         DescriptorBindingInfo::from_sampler(ImageChannelType::RUnorm, 1, false, true) //binding 1
     ]);
-    let mut descriptor = device.new_descriptor_sets(vec![(&descriptor_layout, 1)]).remove(0).remove(0);
+    let mut descriptor = device.new_descriptor_sets(&[(&descriptor_layout, 1)]).remove(0).remove(0);
     descriptor.update_struct(0, &cam_buffer, &cam_view);
     descriptor.update_sampler(1, &[&atlas_image], &sampler);
     //swapchain stuff
@@ -202,7 +202,7 @@ fn main()
                 .render_pass(&render_pass, &framebuffer)
                 .bind_descriptor_sets(&pipeline_layout, &[&descriptor])
                 .bind_pipeline(&pipeline)
-                .bind_attributes(&[&AttributeBinding::from(&buffer, &vertex_view)])
+                .bind_attributes([&AttributeBinding::from(&buffer, &vertex_view)])
                 .draw(&DrawMode::Index(IndexBinding::from(&buffer, &index_view), index_count), 1);
         }
         SwapchainStuff { swapchain, color_buffer, depth_buffer, render_pass, framebuffers, pipeline, command_buffers }
