@@ -30,7 +30,7 @@ ndk-glue = "0.3.0"
 # Android.xml, quite broken for some entries...
 
 [package.metadata.android]
-#build_targets = [ "armv7-linux-androideabi", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android" ]
+#build_targets = [ "armv7-linux-androideabi", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android" ] #armv7-linux-androideabi maybe problematic
 resources = "src/android_res"
 assets = "export/data"
 
@@ -45,9 +45,9 @@ required = true
 #<uses-feature android:glEsVersion="0x00020000" android:required="true" />
 
 [package.metadata.android.sdk]
-min_sdk_version = 18
-target_sdk_version = 26
-max_sdk_version = 26
+min_sdk_version = 21 #8 for glEs 2, 18 for rustc, 16 for audio, 23 for ndk features?
+target_sdk_version = 23
+max_sdk_version = 28 #30 for ndk features
 
 [package.metadata.android.application]
 debuggable = false

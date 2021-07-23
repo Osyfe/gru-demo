@@ -115,6 +115,7 @@ impl App for Demo
 {
 	fn init(ctx: &mut Context) -> Self
 	{
+        gru_opengl::log("init");
         //read storage
         let run_id = match ctx.storage.get("ID")
         {

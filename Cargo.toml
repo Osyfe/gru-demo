@@ -1,5 +1,2 @@
 [workspace]
 members = ["gru-opengl-demo", "gru-vulkan-demo"]
-
-[profile.release]
-lto = true
