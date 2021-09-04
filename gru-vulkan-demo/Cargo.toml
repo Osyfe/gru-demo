@@ -6,6 +6,5 @@ edition = "2018"
 
 [dependencies]
 gru-vulkan = { path = "../../gru-vulkan" }
-gru-misc = { path = "../../gru-misc" }
-winit = "0.24.0"
-image = "0.23.12"
+gru-misc = { path = "../../gru-misc", features = ["math", "text", "time"] }
+winit = "0.25.0"

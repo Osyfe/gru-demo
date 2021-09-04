@@ -5,7 +5,10 @@ layout (location=1) in vec3 surface_coords;
 
 layout (location=0) out vec3 tex_coords;
 
-#include "cam.glsl"
+layout (set=0, binding=0) uniform Camera
+{
+    mat4 proj;
+} cam;
 
 void main()
 {

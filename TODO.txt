@@ -1,4 +1,2 @@
 opengl:
-
-vulkan:
-	-konzept (grundstrkutur von heldenkampf übernehmen), dann weiterschauen
+	- ndk 0.3 vs 0.4

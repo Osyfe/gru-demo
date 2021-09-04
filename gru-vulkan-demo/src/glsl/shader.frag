@@ -9,5 +9,5 @@ layout (set=0, binding=1) uniform sampler2DArray tex;
 void main()
 {
 	float alpha = texture(tex, tex_coords).r;
-    frag_color = vec4(0.0, 0.3, 1.0, alpha);
+    frag_color = vec4(0.0, 0.1, 0.8, alpha);
 }

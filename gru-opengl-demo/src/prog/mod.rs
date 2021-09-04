@@ -1,9 +1,7 @@
 use std::collections::{HashSet, HashMap};
 use gru_opengl::{log, App, Context, gl::*, event};
-use gru_math::*;
-use gru_text::*;
-use gru_util::*;
-use rodio::{Decoder, OutputStream, OutputStreamHandle, source::{Source}, buffer::SamplesBuffer};
+use gru_misc::{math::*, text::*, io::*};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, source::Source, buffer::SamplesBuffer};
 
 mod text;
 mod cube;
@@ -50,7 +48,7 @@ struct InputData
 
 struct SoundData
 {
-    device: Option<(OutputStream, OutputStreamHandle)>, //on web we need to wait for input
+    device: Option<(OutputStream, OutputStreamHandle)>, //on web we need to wait for input -> Option
     map: HashMap<String, (u16, u32, Vec<f32>)>, //name -> (channels, sample_rate, data)
     cooldown_eh: f32,
     cooldown_weh: f32
@@ -115,7 +113,7 @@ impl App for Demo
 {
 	fn init(ctx: &mut Context) -> Self
 	{
-        gru_opengl::log("init");
+        gru_opengl::log("init app");
         //read storage
         let run_id = match ctx.storage.get("ID")
         {
@@ -129,12 +127,16 @@ impl App for Demo
         //graphic
         let gl = &mut ctx.gl;
         //font
-        let mut alphabet = HashSet::new();
-        for text in &TEXTS { for c in text.chars() { if c != ' ' { alphabet.insert(c); } } }
-        let font = Font::new(include_bytes!("../res/futuram.ttf"));
-        let (font_texture, atlas) = Atlas::new(&font, &alphabet, 100.0, ATLAS_SIZE, 5);
-        if font_texture.len() > 1 { panic!("Atlas more than one page"); }
-        let atlas_texture = gl.new_texture(&TextureConfig { size: ATLAS_SIZE, channel: TextureChannel::A, mipmap: false, wrap: TextureWrap::Repeat}, &font_texture[0]);
+        let (atlas, atlas_texture) =
+        {
+            let mut alphabet = HashSet::new();
+            for text in &TEXTS { for c in text.chars() { if c != ' ' { alphabet.insert(c); } } }
+            let font = Font::new(include_bytes!("../res/futuram.ttf"));
+            let (font_texture, atlas) = Atlas::new(&font, &alphabet, 100.0, ATLAS_SIZE, 5);
+            if font_texture.len() > 1 { panic!("Atlas more than one page!"); }
+            let atlas_texture = gl.new_texture(&TextureConfig { size: ATLAS_SIZE, channel: TextureChannel::A, mipmap: false, wrap: TextureWrap::Repeat}, &font_texture[0]);
+            (atlas, atlas_texture)
+        };
         //text
         let max_chars = TEXTS.iter().map(|text| text.chars().count() as u32).max().unwrap();
         let text_shader = gl.new_shader(include_str!("../glsl/text.vert"), include_str!("../glsl/text.frag"));
@@ -211,7 +213,7 @@ impl App for Demo
                 self.input.mouse_down = state == ElementState::Pressed;
                 if self.input.mouse_down { self.play_eh() }
                 else if self.vel.norm() > WEH_VEL { self.play_weh(); }
-            }
+            },
             Event::Cursor { position } =>
             {
                 let (x, y) = position;
@@ -255,7 +257,7 @@ impl App for Demo
         //cooldown
         self.sound.cooldown_eh -= dt;
         self.sound.cooldown_weh -= dt;
-        //physi
+        //physik
         self.vel += (TARGET_ROT - self.vel) * dt;
         self.rot = Rotor::from_axis(self.vel * dt) * self.rot;
         self.rot.fix();

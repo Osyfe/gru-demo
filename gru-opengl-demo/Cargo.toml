@@ -13,9 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 gru-opengl = { path = "../../gru-opengl" }
-gru-math = { path = "../../gru-misc/gru-math" }
-gru-text = { path = "../../gru-misc/gru-text" }
-gru-util = { path = "../../gru-misc/gru-util" }
+gru-misc = { path = "../../gru-misc", features = ["math", "text", "io"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rodio = { version = "0.13.1", default-features = false, features = ["vorbis"] }
@@ -31,7 +29,7 @@ ndk-glue = "0.3.0"
 
 [package.metadata.android]
 #build_targets = [ "armv7-linux-androideabi", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android" ] #armv7-linux-androideabi maybe problematic
-resources = "src/android_res"
+resources = "src/res/android"
 assets = "export/data"
 
 fullscreen = true
