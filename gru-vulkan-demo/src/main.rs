@@ -150,13 +150,10 @@ fn main()
     );
     let framebuffers = swapchain.new_objects(&mut |index| device.new_framebuffer(&render_pass, &[&FramebufferAttachment::Image(&color_buffer), &FramebufferAttachment::Swapchain(swapchain.get_image(index)), &FramebufferAttachment::Image(&depth_buffer)]));
     //pipeline
-    let pipeline_layout = device.new_pipeline_layout(&[&descriptor_layout]);
+    let pipeline_layout = device.new_pipeline_layout(&[&descriptor_layout], None);
     let pipeline_info = PipelineInfo
     {
-        viewport_origin: (0.0, 0.0),
-        viewport_size: (width as f32, height as f32),
-        scissor_origin: (0, 0),
-        scissor_size: (width, height),
+        view: Some(ViewInfo::full(width, height)),
         topology: PipelineTopology::TriangleList,
         samples: MSAA,
         min_sample_shading: None,
@@ -176,8 +173,9 @@ fn main()
             .render_pass(&render_pass, &framebuffer)
             .bind_descriptor_sets(&pipeline_layout, &[&descriptor])
             .bind_pipeline(&pipeline)
-            .bind_attributes([&AttributeBinding::from(&text_buffer, &vertex_view)])
-            .draw(&DrawMode::Index(IndexBinding::from(&text_buffer, &index_view), index_count), 1);
+            .bind_indices(&IndexBinding::from(&text_buffer, &index_view))
+            .bind_attributes(0, [&AttributeBinding::from(&text_buffer, &vertex_view)])
+            .draw(&DrawMode::index(index_count));
     }
     //synchronization elements
     let image_available = swapchain.new_cycle(&mut || device.new_semaphore());
@@ -356,7 +354,7 @@ impl Camera
     fn mat(&self) -> Mat4
     {
         let rot = Mat4::rotation_x(-self.theta) * Mat4::rotation_y(-self.phi);
-        let trans = Mat4::translation(-self.pos.0, -self.pos.1, -self.pos.2);
+        let trans = Mat4::translation(Vec3(-self.pos.0, -self.pos.1, -self.pos.2));
         self.proj * rot * trans
     }
 }

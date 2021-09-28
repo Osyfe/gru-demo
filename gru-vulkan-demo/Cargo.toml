@@ -2,7 +2,7 @@
 name = "gru-vulkan-demo"
 version = "0.1.0"
 authors = ["Jannik Fehre"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 gru-vulkan = { path = "../../gru-vulkan" }
