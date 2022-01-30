@@ -49,7 +49,7 @@ fn main()
     {
         let font = Font::new(include_bytes!("res/futuram.ttf"));
         let chars = &Font::all_letters() | &Font::text_special_characters();
-        let (atlas_data, atlas) = Atlas::new(&font, &chars, 200.0, ATLAS_SIZE, 5);
+        let (atlas_data, atlas) = Atlas::new(font, chars, 200.0, ATLAS_SIZE, 5);
         let atlas_image_type = ImageType { channel: ImageChannelType::RUnorm, width: ATLAS_SIZE, height: ATLAS_SIZE, layers: Some(atlas_data.len() as u32) };
         let atlas_image = device.new_image(atlas_image_type, ImageUsage::Texture { mipmapping: true });
         let mut atlas_buffer = device.new_image_buffer(atlas_image_type);
@@ -69,15 +69,14 @@ fn main()
     let TextData { index_count, line_count, .. } = atlas.text
     (
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-        TEXT_WIDTH,
-        Align::Block,
-        &mut |i| indices.push(i),
-        &mut |c, p| vertices.push(Char { position: p.into(), coords: c.into() })
+        Layout { width: TEXT_WIDTH, align: Align::Block, auto_wrap: true },
+        |i| indices.push(i),
+        |c, p| vertices.push(Char { position: p.into(), coords: (c.0, c.1, c.2 as f32).into() })
     );
     //text data upload
     let mut buffer_type = device.new_buffer_type();
-    let index_view = buffer_type.add_indices(indices.len());
-    let vertex_view = buffer_type.add_attributes(vertices.len());
+    let index_view = buffer_type.add_indices(indices.len() as u32);
+    let vertex_view = buffer_type.add_attributes(vertices.len() as u32);
     let text_buffer =
     {
         let mut stage_buffer = device.new_buffer(&mut buffer_type, BufferUsage::Stage);
@@ -260,7 +259,7 @@ fn main()
                         map.write_uniforms(&cam_view, 0, &[CamBinding { mat: cam.mat().into() }]);
                     }
                     //submit and presend
-                    command_buffers.get(&image_index).submit(&queue, &image_available, &rendering_finished, &may_begin_drawing);
+                    command_buffers.get(&image_index).submit(&queue, Some(&image_available), Some(&rendering_finished), &may_begin_drawing);
                     swapchain.present(image_index, &queue, &rendering_finished);
                 } else
                 { //some swapchain error occured (such as a resize or the window was minimized)

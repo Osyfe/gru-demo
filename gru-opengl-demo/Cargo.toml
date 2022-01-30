@@ -12,18 +12,18 @@ name = "desktop"
 path = "src/main.rs"
 
 [dependencies]
-gru-opengl = { path = "../../gru-opengl" }
+gru-opengl = { path = "../../gru-opengl", features = ["fs", "ui"] }
 gru-misc = { path = "../../gru-misc", features = ["math", "text", "io"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rodio = { version = "0.13.1", default-features = false, features = ["vorbis"] }
+rodio = { version = "0.14.0", default-features = false, features = ["vorbis"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2.73"
-rodio = { version = "0.13.1", default-features = false, features = ["vorbis", "wasm-bindgen"] }
+wasm-bindgen = "0.2.78"
+rodio = { version = "0.14.0", default-features = false, features = ["vorbis", "wasm-bindgen"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-ndk-glue = "0.3.0"
+ndk-glue = "0.3.0" #0.4 is out, but winit uses 0.3
 
 # Android.xml, quite broken for some entries...
 

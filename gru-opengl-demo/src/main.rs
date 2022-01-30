@@ -3,4 +3,4 @@
 
 mod prog;
 
-pub fn main() { gru_opengl::start::<prog::Demo>(); }
+pub fn main() { gru_opengl::start::<prog::Demo>(()); }
