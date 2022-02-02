@@ -1,12 +1,14 @@
 use std::collections::{HashSet, HashMap};
-use gru_opengl::{log, App, Context, gl::*, event, ui};
+use gru_opengl::{log, App, Context, gl::*, event, ui, resource::{ResSys, ResourceSystem}};
 use gru_misc::{math::*, text::*, io::*};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, source::Source, buffer::SamplesBuffer};
 
-mod text;
 mod cube;
-use text::*;
-use cube::*;
+mod resources;
+//mod sound;
+use resources::Resources;
+
+//use self::sound::SoundData;
 
 const FRAMEBUFFER_SIZE: u32 = 1024;
 const TARGET_ROT: Vec3 = Vec3(0.5, 0.5, 0.5);
@@ -20,31 +22,12 @@ struct AtlasData
     texture: Texture<false>
 }
 
-struct TextData
-{
-    shader: Shader<GlyphVertex>,
-    vertices: VertexBuffer<GlyphVertex>,
-    indices: IndexBuffer,
-    text: Text,
-    index_count: u32,
-    height_key: UniformKey<f32>,
-    atlas_key: UniformKey<Texture<false>>
-}
-
-struct CubeData
-{
-    shader: Shader<CubeVertex>,
-    vertices: VertexBuffer<CubeVertex>,
-    indices: IndexBuffer,
-    mat_key: UniformKey<Mat4>,
-    tex_key: UniformKey<Texture<true>>
-}
-
 struct InputData
 {
     last_pos: (f32, f32),
     mouse_down: bool
 }
+
 
 struct SoundData
 {
@@ -62,10 +45,6 @@ struct UiData
 pub struct Demo
 {
     run_id: u64,
-    atlas: AtlasData,
-    text: TextData,
-    cube: CubeData,
-    framebuffer: Framebuffer,
     rot: Rotor,
     vel: Vec3,
     input: InputData,
@@ -73,7 +52,8 @@ pub struct Demo
     ui_data: UiData,
     ui: ui::Ui<'static, UiData>,
     ui_events: Vec<ui::event::Event>,
-    ui_binding: ui::Binding
+    ui_binding: ui::Binding,
+    resources: ResSys<Resources>,
 }
 
 impl Demo
@@ -134,39 +114,11 @@ impl App for Demo
         };
         log(&format!("run_id = {}", run_id));
         //load files
+        let resources = Resources::new_loading(1, ctx);
         ctx.load_file("eh.ogg", 0);
         ctx.load_file("weh.ogg", 0);
         //graphic
         let gl = ctx.gl();
-        //font
-        let (atlas, atlas_texture) =
-        {
-            let mut alphabet = HashSet::new();
-            for text in &TEXTS { for c in text.chars() { if c != ' ' { alphabet.insert(c); } } }
-            let font = Font::new(include_bytes!("../res/futuram.ttf"));
-            let (font_texture, atlas) = Atlas::new(font, alphabet, 100.0, ATLAS_SIZE, 5);
-            if font_texture.len() > 1 { panic!("Atlas more than one page!"); }
-            let atlas_texture = gl.new_texture(&TextureConfig { size: ATLAS_SIZE, channel: TextureChannel::A, mipmap: false, wrap: TextureWrap::Repeat }, &font_texture[0]);
-            (atlas, atlas_texture)
-        };
-        //text
-        let max_chars = TEXTS.iter().map(|text| text.chars().count() as u32).max().unwrap();
-        let text_shader = gl.new_shader(include_str!("../glsl/text.vert"), include_str!("../glsl/text.frag"));
-        let text_vertices = gl.new_vertex_buffer(max_chars * 4, BufferAccess::Dynamic);
-        let text_indices = gl.new_index_buffer(max_chars * 6, BufferAccess::Dynamic);
-        let height_key = text_shader.get_key("height");
-        let atlas_key = text_shader.get_key("atlas");
-        //cube
-        let cube_shader = gl.new_shader(include_str!("../glsl/cube.vert"), include_str!("../glsl/cube.frag"));
-        let (indices, vertices) = cube();
-        let mut cube_vertices = gl.new_vertex_buffer(vertices.len() as u32, BufferAccess::Static);
-        cube_vertices.data(0, &vertices);
-        let mut cube_indices = gl.new_index_buffer(indices.len() as u32, BufferAccess::Static);
-        cube_indices.data(0, &indices);   
-        let mat_key = cube_shader.get_key("mat");
-        let tex_key = cube_shader.get_key("tex");
-        //framebuffer
-        let framebuffer = gl.new_framebuffer(&FramebufferConfig { depth: false, size: FRAMEBUFFER_SIZE, wrap: TextureWrap::Clamp });
         //ui
         let (ui_data, ui, ui_events, ui_binding) =
         {
@@ -194,25 +146,6 @@ impl App for Demo
 		Self
         {
             run_id,
-            atlas: AtlasData
-            {
-                atlas,
-                texture: atlas_texture
-            },
-            text: TextData
-            {
-                shader: text_shader,
-                vertices: text_vertices, indices: text_indices,
-                text: Text::None, index_count: 0,
-                height_key, atlas_key
-            },
-            cube: CubeData
-            {
-                shader: cube_shader,
-                vertices: cube_vertices, indices: cube_indices,
-                mat_key, tex_key
-            },
-            framebuffer,
             rot: Rotor::identity(),
             vel: TARGET_ROT,
             input: InputData
@@ -227,7 +160,7 @@ impl App for Demo
                 cooldown_eh: 0.0,
                 cooldown_weh: 0.0
             },
-            ui_data, ui, ui_events, ui_binding
+            ui_data, ui, ui_events, ui_binding, resources
         }
 	}
 
@@ -237,12 +170,14 @@ impl App for Demo
         use event::*;
         match event
         {
-            Event::File(Ok(File { path: name, key: _, data })) =>
+            Event::File(Ok(File { path: name, key, data })) => if key < 1000
             {
                 let decoder = Decoder::new_vorbis(SliceReadSeek::new(&data)).unwrap();
                 let (channels, sample_rate) = (decoder.channels(), decoder.sample_rate());
                 let data = decoder.convert_samples::<f32>().collect::<Vec<_>>();
                 self.sound.map.insert(name, (channels, sample_rate, data));
+            } else {
+                self.resources.add_file_event(File { path: name, key, data }, ctx.gl());
             },
             Event::File(Err(err)) => log(err.as_str()),
             Event::Click { button: MouseButton::Left, pressed } =>
@@ -311,43 +246,17 @@ impl App for Demo
         self.rot = Rotor::from_axis(self.vel * dt) * self.rot;
         self.rot.fix();
         //graphic
-        //text
-        let current_text = if self.vel.norm() > WEH_VEL { Text::Wuhu } else { Text::Hello };
-        let (text, num_lines) = current_text.get();
-        if current_text != self.text.text
-        {
-            let mut vertices = Vec::with_capacity(text.len() * 4);
-            let mut indices = Vec::with_capacity(text.len() * 6);
-            let text_data = self.atlas.atlas.text
-            (
-                text,
-                Layout { width: num_lines, align: Align::Center, auto_wrap: true },
-                &mut |index| indices.push(index as u16),
-                &mut |(s, t, _), (x, y): (f32, f32)| vertices.push(GlyphVertex { position: [x, -y], tex_coords: [s, t] })
-            );
-            self.text.vertices.data(0, &vertices);
-            self.text.indices.data(0, &indices);
-            self.text.text = current_text;
-            self.text.index_count = text_data.index_count;
-
-            gl
-                .render_pass(RenderTarget::Texture(&mut self.framebuffer), RenderPassInfo { clear_color: Some((0.0, 0.0, 0.0)), clear_depth: false })
-                .pipeline(&self.text.shader, PipelineInfo { depth_test: false, alpha_blend: false, face_cull: true })
-                .uniform_key(&self.text.height_key, &(2.0 / num_lines))
-                .uniform_key(&self.text.atlas_key, &self.atlas.texture)
-                .draw(Primitives::Triangles, &self.text.vertices, Some(&self.text.indices), 0, self.text.index_count);
-        }
-        let mut rp = gl.render_pass(RenderTarget::Screen, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true });
         //cube
+        let mut rp = gl.render_pass(RenderTarget::Screen, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true });
         let mat = 
             Mat4::perspective_opengl(width as f32 / height as f32, std::f32::consts::FRAC_PI_8, 7.0, 10.0)
           * Mat4::translation_z(-9.0)
           * self.rot.to_mat4();
         rp
-            .pipeline(&self.cube.shader, PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
-            .uniform_key(&self.cube.mat_key, &mat)
-            .uniform_key(&self.cube.tex_key, self.framebuffer.texture())
-            .draw(Primitives::Triangles, &self.cube.vertices, Some(&self.cube.indices), 0, 36);
+            .pipeline(&self.resources.cube_shader.get(), PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
+            .uniform_name("mat", &mat)
+            .uniform_name("tex", self.resources.cube_texture.get())
+            .draw(Primitives::Triangles, &self.resources.cube_model.get().vertices, Some(&self.resources.cube_model.get().indices), 0, self.resources.cube_model.get().indices.len() as u32);
         //ui
         self.ui_binding.render(&mut rp);
 

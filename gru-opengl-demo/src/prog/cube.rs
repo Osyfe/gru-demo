@@ -1,5 +1,38 @@
 use gru_opengl::gl::{AttributesReprCpacked, BufferType};
+use gru_opengl::resource::load::{BuildFromGltf, VertexData};
 
+#[repr(C, packed)]
+pub struct CubeVertex
+{
+    pub position: [f32; 3],
+    pub color: [f32; 3],
+    pub tex_coords: [f32; 2],
+}
+
+impl AttributesReprCpacked for CubeVertex
+{
+    const ATTRIBUTES: &'static [(BufferType, &'static str)] =
+    &[
+        (BufferType::Float { size: 3 }, "position"),
+        (BufferType::Float { size: 3 }, "color"),
+        (BufferType::Float { size: 2 }, "tex_coords")
+    ];
+}
+
+impl BuildFromGltf for CubeVertex 
+{
+    fn build(vd: VertexData) -> Self {
+        Self 
+        {
+            position: vd.position,
+            color: vd.color,
+            tex_coords: vd.tex_coord,  
+        }
+    }            
+}
+
+
+/*
 pub const fn cube() -> ([u16; 36], [CubeVertex; 24])
 {
     let indices =
@@ -45,22 +78,4 @@ pub const fn cube() -> ([u16; 36], [CubeVertex; 24])
         CubeVertex { position: [1.0, 1.0, 1.0], color: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] }  //23 ruf
     ];
     (indices, vertices)
-}
-
-#[repr(C, packed)]
-pub struct CubeVertex
-{
-    pub position: [f32; 3],
-    pub color: [f32; 3],
-    pub tex_coords: [f32; 2],
-}
-
-impl AttributesReprCpacked for CubeVertex
-{
-    const ATTRIBUTES: &'static [(BufferType, &'static str)] =
-    &[
-        (BufferType::Float { size: 3 }, "position"),
-        (BufferType::Float { size: 3 }, "color"),
-        (BufferType::Float { size: 2 }, "tex_coords")
-    ];
-}
+}*/
