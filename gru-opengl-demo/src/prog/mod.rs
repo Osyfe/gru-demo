@@ -247,16 +247,19 @@ impl App for Demo
         self.rot.fix();
         //graphic
         //cube
+        
         let mut rp = gl.render_pass(RenderTarget::Screen, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true });
-        let mat = 
-            Mat4::perspective_opengl(width as f32 / height as f32, std::f32::consts::FRAC_PI_8, 7.0, 10.0)
-          * Mat4::translation_z(-9.0)
-          * self.rot.to_mat4();
-        rp
-            .pipeline(&self.resources.cube_shader.get(), PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
-            .uniform_name("mat", &mat)
-            .uniform_name("tex", self.resources.cube_texture.get())
-            .draw(Primitives::Triangles, &self.resources.cube_model.get().vertices, Some(&self.resources.cube_model.get().indices), 0, self.resources.cube_model.get().indices.len() as u32);
+        if self.resources.finished_loading() {
+            let mat = 
+                Mat4::perspective_opengl(width as f32 / height as f32, std::f32::consts::FRAC_PI_8, 7.0, 10.0)
+            * Mat4::translation_z(-9.0)
+            * self.rot.to_mat4();
+            rp
+                .pipeline(&self.resources.cube_shader.get(), PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
+                .uniform_name("mat", &mat)
+                .uniform_name("tex", self.resources.cube_texture.get())
+                .draw(Primitives::Triangles, &self.resources.cube_model.get().vertices, Some(&self.resources.cube_model.get().indices), 0, self.resources.cube_model.get().indices.len() as u32);
+        }
         //ui
         self.ui_binding.render(&mut rp);
 
