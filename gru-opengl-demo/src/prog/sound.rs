@@ -72,10 +72,10 @@ impl SoundSystem{
 
 pub struct SoundData 
 {
-    pub channels: u16,
-    pub sample_rate: u32,
-    pub data: Vec<f32>,
+    channels: u16,
+    sample_rate: u32,
     duration: Duration,
+    data: Arc<Vec<f32>>
 }
 
 pub struct SoundBuffer
@@ -83,7 +83,8 @@ pub struct SoundBuffer
     channels: u16,
     sample_rate: u32,
     duration: Duration,
-    data: std::slice::Iter<'static, f32>,
+    data: Arc<Vec<f32>>,
+    index: usize
 }
 
 impl Load for SoundData 
@@ -114,7 +115,7 @@ impl Load for SoundData
 impl SoundData {
     fn buffer(&self) -> SoundBuffer
     {
-        SoundBuffer{ channels: self.channels, sample_rate: self.sample_rate, duration: self.duration, data: self.data.clone().iter() }
+        SoundBuffer { channels: self.channels, sample_rate: self.sample_rate, duration: self.duration, data: self.data.clone(), index: 0 }
     }
 
     fn new(channels: u16, sample_rate: u32, data: Vec<f32>) -> Self {
@@ -130,14 +131,23 @@ impl SoundData {
         );
 
         SoundData {
-            data: data,
             channels,
             sample_rate,
-            duration,
+            data: Arc::new(data),
+            duration
         }
     }
 }
 
+impl Iterator for SoundBuffer {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let i = self.index;
+        self.index += 1;
+        self.data.get(i).cloned()
+    }
+}
 
 impl Source for SoundBuffer {
     fn current_frame_len(&self) -> Option<usize> {
@@ -154,13 +164,5 @@ impl Source for SoundBuffer {
 
     fn total_duration(&self) -> Option<std::time::Duration> {
         Some(self.duration)
-    }
-}
-
-impl<'a> Iterator for SoundBuffer {
-    type Item = f32;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.data.next().cloned()
     }
 }
