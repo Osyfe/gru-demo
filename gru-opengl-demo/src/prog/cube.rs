@@ -1,3 +1,11 @@
+
+use gru_opengl::{resource::load::{Model, TextureLoadConfig} , gl::{Shader, Texture, TextureChannel, TextureWrap}, impl_ResourceSystem};
+impl_ResourceSystem!(CubeResources = 
+    (model, Model<CubeVertex>, "cube", ()),
+    (shader, Shader<CubeVertex>, "cube", ()),
+    (texture, Texture<false>, "cube", TextureLoadConfig { channel: TextureChannel::RGB, mipmap: true, wrap: TextureWrap::Repeat })
+);
+
 use gru_opengl::gl::{AttributesReprCpacked, BufferType};
 use gru_opengl::resource::load::{BuildFromGltf, VertexData};
 
@@ -26,7 +34,7 @@ impl BuildFromGltf for CubeVertex
         {
             position: vd.position,
             color: vd.color,
-            tex_coords: [vd.tex_coord[0] * 30.0, vd.tex_coord[1] * 30.0],  
+            tex_coords: [vd.tex_coord[0] * 0.6, vd.tex_coord[1] * 0.6],  
         }
     }            
 }

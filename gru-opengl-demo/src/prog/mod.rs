@@ -1,33 +1,21 @@
-use std::collections::HashMap;
+
 use gru_opengl::{log, App, Context, gl::*, event, ui, resource::{ResSys, ResourceSystem}};
-use gru_misc::{math::*, text::*, io::*};
-use rodio::{Decoder, OutputStream, OutputStreamHandle, source::Source, buffer::SamplesBuffer};
+use gru_misc::{math::*, text::*};
 
 mod cube;
-mod resources;
-//mod sound;
-use resources::Resources;
+mod sound;
+use cube::CubeResources;
 
-//use self::sound::SoundData;
+use self::sound::SoundSystem;
 
 const TARGET_ROT: Vec3 = Vec3(0.5, 0.5, 0.5);
 const ACC: f32 = 0.003;
 const WEH_VEL: f32 = 10.0;
-const SOUND_COOLDOWN: f32 = 0.5;
 
 struct InputData
 {
     last_pos: (f32, f32),
     mouse_down: bool
-}
-
-
-struct SoundData
-{
-    device: Option<(OutputStream, OutputStreamHandle)>, //on web we need to wait for input -> Option
-    map: HashMap<String, (u16, u32, Vec<f32>)>, //name -> (channels, sample_rate, data)
-    cooldown_eh: f32,
-    cooldown_weh: f32
 }
 
 struct UiData
@@ -41,54 +29,12 @@ pub struct Demo
     rot: Rotor,
     vel: Vec3,
     input: InputData,
-    sound: SoundData,
+    sound: SoundSystem,
     ui_data: UiData,
     ui: ui::Ui<'static, UiData>,
     ui_events: Vec<ui::event::Event>,
     ui_binding: ui::Binding,
-    resources: ResSys<Resources>,
-}
-
-impl Demo
-{
-    fn init_audio(&mut self)
-    {
-        if self.sound.device.is_none()
-        {
-            log("init audio");
-            self.sound.device = Some(OutputStream::try_default().unwrap());
-        }
-    }
-
-    fn play_audio(&mut self, name: &str)
-    {
-        if let Some((channels, sample_rate, data)) = self.sound.map.get(name)
-        {
-            if let Some(device) = &self.sound.device
-            {
-                let buffer = SamplesBuffer::new(*channels, *sample_rate, data.clone());
-                device.1.play_raw(buffer).unwrap();
-            }
-        }
-    }
-
-    fn play_eh(&mut self)
-    {
-        if self.sound.cooldown_eh <= 0.0
-        {
-            self.sound.cooldown_eh = SOUND_COOLDOWN;
-            self.play_audio("eh.ogg");
-        }
-    }
-
-    fn play_weh(&mut self)
-    {
-        if self.sound.cooldown_weh <= 0.0
-        {
-            self.sound.cooldown_weh = SOUND_COOLDOWN;
-            self.play_audio("weh.ogg");
-        }
-    }
+    cube_resources: ResSys<CubeResources>,
 }
 
 impl App for Demo
@@ -107,9 +53,9 @@ impl App for Demo
         };
         log(&format!("run_id = {}", run_id));
         //load files
-        let resources = Resources::new_loading(1, ctx);
-        ctx.load_file("eh.ogg", 0);
-        ctx.load_file("weh.ogg", 0);
+        let cube_resources = CubeResources::new_loading(1, ctx);
+        ctx.load_file("sounds\\eh.ogg", 0);
+        ctx.load_file("sounds\\weh.ogg", 0);
         //graphic
         let gl = ctx.gl();
         //ui
@@ -144,14 +90,8 @@ impl App for Demo
                 last_pos: (0.0, 0.0),
                 mouse_down: false
             },
-            sound: SoundData
-            {
-                device: None,
-                map: HashMap::new(),
-                cooldown_eh: 0.0,
-                cooldown_weh: 0.0
-            },
-            ui_data, ui, ui_events, ui_binding, resources
+            sound: SoundSystem::new(ctx),
+            ui_data, ui, ui_events, ui_binding, cube_resources
         }
 	}
 
@@ -161,22 +101,21 @@ impl App for Demo
         use event::*;
         match event
         {
-            Event::File(Ok(File { path: name, key, data })) => if key < 1000
-            {
-                let decoder = Decoder::new_vorbis(SliceReadSeek::new(&data)).unwrap();
-                let (channels, sample_rate) = (decoder.channels(), decoder.sample_rate());
-                let data = decoder.convert_samples::<f32>().collect::<Vec<_>>();
-                self.sound.map.insert(name, (channels, sample_rate, data));
-            } else {
-                self.resources.add_file_event(File { path: name, key, data }, ctx.gl());
-            },
+            Event::File(Ok(file)) => 
+                if self.cube_resources.needs_key(&file.key)
+                {
+                    self.cube_resources.add_file_event(file, ctx.gl());
+                } else if self.sound.resources.needs_key(&file.key)
+                {
+                    self.sound.resources.add_file_event(file, ctx.gl());
+                }
             Event::File(Err(err)) => log(err.as_str()),
             Event::Click { button: MouseButton::Left, pressed } =>
             {
-                self.init_audio();
+                self.sound.init_audio();
                 self.input.mouse_down = pressed;
-                if self.input.mouse_down { self.play_eh() }
-                else if self.vel.norm() > WEH_VEL { self.play_weh(); }
+                if self.input.mouse_down { self.sound.play_eh() }
+                else if self.vel.norm() > WEH_VEL { self.sound.play_weh(); }
             },
             Event::Cursor { position } =>
             {
@@ -197,10 +136,10 @@ impl App for Demo
                 {
                     TouchPhase::Started =>
                     {
-                        self.init_audio();
-                        self.play_eh();
+                        self.sound.init_audio();
+                        self.sound.play_eh();
                     },
-                    TouchPhase::Ended => if self.vel.norm() > WEH_VEL { self.play_weh() },
+                    TouchPhase::Ended => if self.vel.norm() > WEH_VEL { self.sound.play_weh() },
                     TouchPhase::Moved =>
                     {
                         let (x2, y2) = self.input.last_pos;
@@ -240,16 +179,17 @@ impl App for Demo
         //cube
         
         let mut rp = gl.render_pass(RenderTarget::Screen, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true });
-        if self.resources.finished_loading() {
+        if self.cube_resources.finished_loading() {
+            let res = &self.cube_resources;
             let mat = 
                 Mat4::perspective_opengl(width as f32 / height as f32, std::f32::consts::FRAC_PI_8, 7.0, 10.0)
             * Mat4::translation_z(-9.0)
             * self.rot.to_mat4();
             rp
-                .pipeline(&self.resources.cube_shader.get(), PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
+                .pipeline(&res.shader.get(), PipelineInfo { depth_test: true, alpha_blend: false, face_cull: true })
                 .uniform_name("mat", &mat)
-                .uniform_name("tex", self.resources.cube_texture.get())
-                .draw(Primitives::Triangles, &self.resources.cube_model.get().vertices, Some(&self.resources.cube_model.get().indices), 0, self.resources.cube_model.get().indices.len() as u32);
+                .uniform_name("tex", res.texture.get())
+                .draw(Primitives::Triangles, &res.model.get().vertices, Some(&res.model.get().indices), 0, res.model.get().indices.len() as u32);
         }
         //ui
         self.ui_binding.render(&mut rp);
