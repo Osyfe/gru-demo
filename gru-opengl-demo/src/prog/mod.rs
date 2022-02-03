@@ -1,4 +1,4 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashMap;
 use gru_opengl::{log, App, Context, gl::*, event, ui, resource::{ResSys, ResourceSystem}};
 use gru_misc::{math::*, text::*, io::*};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, source::Source, buffer::SamplesBuffer};
@@ -10,17 +10,10 @@ use resources::Resources;
 
 //use self::sound::SoundData;
 
-const FRAMEBUFFER_SIZE: u32 = 1024;
 const TARGET_ROT: Vec3 = Vec3(0.5, 0.5, 0.5);
 const ACC: f32 = 0.003;
 const WEH_VEL: f32 = 10.0;
 const SOUND_COOLDOWN: f32 = 0.5;
-
-struct AtlasData
-{
-    atlas: Atlas,
-    texture: Texture<false>
-}
 
 struct InputData
 {
@@ -128,17 +121,15 @@ impl App for Demo
             let font = Font::new(include_bytes!("../res/futuram.ttf"));
             let mut ui = ui::Ui::new(font, |data: &UiData| ui::UiConfig { size: data.size, scale: 1.0, display_scale_factor: 1.0 }); //ignore display scale
             
-            use ui::{widget::{WidgetExt, Square, Label}, layout::{LayoutAlign, Flex, Split}};
+            use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}};
             use gru_misc::{paint::TextSize};
             let column = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
-                .with(Label::new("Small", TextSize::Small, Align::Right))
-                .with(Square::new().response(Some(Box::new(|| println!("Button 1")))))
+                .with(Label::new("Small", TextSize::Small, Align::Right).bg().response(Some(Box::new(|| println!("Button 1")))))
                 .with(Label::new("Normal", TextSize::Normal, Align::Center))
-                .with(Square::new())
                 .with(Label::new("Large", TextSize::Large, Align::Left))
                 .align(LayoutAlign::Fill, LayoutAlign::Front)
-                .padding(Vec2(1.0, 1.0));
-            ui.add(Split::row([column.boxed(), Square::new().boxed()], None));
+                .padding(Vec2(3.0, 1.0));
+            ui.add(Split::row([column.boxed(), Label::new("Right side", TextSize::Normal, Align::Center).boxed()], None));
 
             (ui_data, ui, ui_events, ui_binding)
         };
