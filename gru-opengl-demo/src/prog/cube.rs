@@ -26,7 +26,7 @@ impl BuildFromGltf for CubeVertex
         {
             position: vd.position,
             color: vd.color,
-            tex_coords: vd.tex_coord,  
+            tex_coords: [vd.tex_coord[0] * 30.0, vd.tex_coord[1] * 30.0],  
         }
     }            
 }
