@@ -112,10 +112,9 @@ impl App for Demo
             Event::File(Err(err)) => log(err.as_str()),
             Event::Click { button: MouseButton::Left, pressed } =>
             {
-                self.sound.init_audio();
                 self.input.mouse_down = pressed;
-                if self.input.mouse_down { self.sound.play_eh() }
-                else if self.vel.norm() > WEH_VEL { self.sound.play_weh(); }
+                if self.input.mouse_down { self.sound.play_eh(ctx) }
+                else if self.vel.norm() > WEH_VEL { self.sound.play_weh(ctx); }
             },
             Event::Cursor { position } =>
             {
@@ -136,10 +135,9 @@ impl App for Demo
                 {
                     TouchPhase::Started =>
                     {
-                        self.sound.init_audio();
-                        self.sound.play_eh();
+                        self.sound.play_eh(ctx);
                     },
-                    TouchPhase::Ended => if self.vel.norm() > WEH_VEL { self.sound.play_weh() },
+                    TouchPhase::Ended => if self.vel.norm() > WEH_VEL { self.sound.play_weh(ctx) },
                     TouchPhase::Moved =>
                     {
                         let (x2, y2) = self.input.last_pos;
