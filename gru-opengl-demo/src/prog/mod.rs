@@ -53,9 +53,7 @@ impl App for Demo
         };
         log(&format!("run_id = {}", run_id));
         //load files
-        let cube_resources = CubeResources::new_loading(1, ctx);
-        ctx.load_file("sounds\\eh.ogg", 0);
-        ctx.load_file("sounds\\weh.ogg", 0);
+        let cube_resources = CubeResources::new_loading(ctx);
         //graphic
         let gl = ctx.gl();
         //ui
@@ -90,7 +88,7 @@ impl App for Demo
                 last_pos: (0.0, 0.0),
                 mouse_down: false
             },
-            sound: SoundSystem::new(ctx),
+            sound: SoundSystem::new_loading(ctx),
             ui_data, ui, ui_events, ui_binding, cube_resources
         }
 	}

@@ -15,11 +15,11 @@ impl_ResourceSystem!(SoundResources =
 );
 
 impl SoundSystem{
-    pub fn new(ctx: &mut Context) -> Self 
+    pub fn new_loading( ctx: &mut Context) -> Self 
     {
         Self
         {
-            resources: SoundResources::new_loading(2, ctx),
+            resources: SoundResources::new_loading(ctx),
             cooldown_eh: 0.0,
             cooldown_weh: 0.0
         }
