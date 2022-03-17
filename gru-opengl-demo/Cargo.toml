@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 gru-opengl = { path = "../../gru-opengl", features = ["fs", "ui", "resource"] }
-gru-misc = { path = "../../gru-misc", features = ["math", "text", "io"] }
+gru-misc = { path = "../../gru-misc", features = ["math", "text"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rodio = { version = "0.14.0", default-features = false, features = ["vorbis"] }

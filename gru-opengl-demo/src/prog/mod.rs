@@ -68,12 +68,12 @@ impl App for Demo
             use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}};
             use gru_misc::{paint::TextSize};
             let column = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
-                .with(Label::new("Small", TextSize::Small, Align::Right).bg().response(Some(Box::new(|| println!("Button 1")))))
-                .with(Label::new("Normal", TextSize::Normal, Align::Center))
-                .with(Label::new("Large", TextSize::Large, Align::Left))
+                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(Some(Box::new(|| println!("Button 1")))))
+                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal"))
+                .with(Label::new(TextSize::Large, Align::Left).owning("Large"))
                 .align(LayoutAlign::Fill, LayoutAlign::Front)
-                .padding(Vec2(3.0, 1.0));
-            ui.add(Split::row([column.boxed(), Label::new("Right side", TextSize::Normal, Align::Center).boxed()], None));
+                .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
+            ui.add(Split::row([column.boxed(), Label::new(TextSize::Normal, Align::Center).owning("Right side").boxed()], None), |_| true);
 
             (ui_data, ui, ui_events, ui_binding)
         };
