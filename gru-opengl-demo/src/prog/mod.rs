@@ -67,7 +67,7 @@ impl App for Demo
             use gru_misc::{paint::TextSize};
             let column = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
                 .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(&ui).action(|| println!("Button 1")))
-                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal"))
+                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg().response(&ui).query("B2"))
                 .with(Label::new(TextSize::Large, Align::Left).owning("Large"))
                 .align(LayoutAlign::Fill, LayoutAlign::Front)
                 .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
@@ -159,8 +159,9 @@ impl App for Demo
         let gl = ctx.gl();
         //ui
         self.ui_data.size = Vec2(width as f32, height as f32);
-        let ui::Frame { paint, .. } = self.ui.frame(&mut self.ui_data, self.ui_binding.events().iter());
+        let ui::Frame { paint, query, .. } = self.ui.frame(&mut self.ui_data, self.ui_binding.events().iter());
         self.ui_binding.frame(self.ui_data.size, gl, paint);
+        if query.query("B2").unwrap().clicked.is_some() { println!("Button 2"); }
         //cooldown
         self.sound.cooldown_eh -= dt;
         self.sound.cooldown_weh -= dt;
