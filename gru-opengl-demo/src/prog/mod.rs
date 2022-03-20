@@ -31,8 +31,7 @@ pub struct Demo
     input: InputData,
     sound: SoundSystem,
     ui_data: UiData,
-    ui: ui::Ui<'static, UiData>,
-    ui_events: Vec<ui::event::Event>,
+    ui: ui::Ui<'static, UiData, String>,
     ui_binding: ui::Binding,
     cube_resources: ResSys<CubeResources>,
 }
@@ -57,10 +56,9 @@ impl App for Demo
         //graphic
         let gl = ctx.gl();
         //ui
-        let (ui_data, ui, ui_events, ui_binding) =
+        let (ui_data, ui, ui_binding) =
         {
             let ui_data = UiData { size: Vec2(1.0, 1.0) };
-            let ui_events = Vec::new();
             let ui_binding = ui::Binding::new(gl);
             let font = Font::new(include_bytes!("../res/futuram.ttf"));
             let mut ui = ui::Ui::new(font, |data: &UiData| ui::UiConfig { size: data.size, scale: 1.0, display_scale_factor: 1.0 }); //ignore display scale
@@ -68,14 +66,14 @@ impl App for Demo
             use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}};
             use gru_misc::{paint::TextSize};
             let column = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
-                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(Some(Box::new(|| println!("Button 1")))))
+                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(&ui).action(|| println!("Button 1")))
                 .with(Label::new(TextSize::Normal, Align::Center).owning("Normal"))
                 .with(Label::new(TextSize::Large, Align::Left).owning("Large"))
                 .align(LayoutAlign::Fill, LayoutAlign::Front)
                 .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
             ui.add(Split::row([column.boxed(), Label::new(TextSize::Normal, Align::Center).owning("Right side").boxed()], None), |_| true);
 
-            (ui_data, ui, ui_events, ui_binding)
+            (ui_data, ui, ui_binding)
         };
         //pack everything
 		Self
@@ -89,13 +87,13 @@ impl App for Demo
                 mouse_down: false
             },
             sound: SoundSystem::new_loading(ctx),
-            ui_data, ui, ui_events, ui_binding, cube_resources
+            ui_data, ui, ui_binding, cube_resources
         }
 	}
 
     fn input(&mut self, ctx: &mut Context, event: event::Event)
     {
-        if let Some(event) = self.ui_binding.event(self.ui_data.size, &event) { self.ui_events.push(event); }
+        self.ui_binding.event(self.ui_data.size, &event);
         use event::*;
         match event
         {
@@ -161,8 +159,7 @@ impl App for Demo
         let gl = ctx.gl();
         //ui
         self.ui_data.size = Vec2(width as f32, height as f32);
-        let ui::Frame { paint, .. } = self.ui.frame(&mut self.ui_data, self.ui_events.iter());
-        self.ui_events.clear();
+        let ui::Frame { paint, .. } = self.ui.frame(&mut self.ui_data, self.ui_binding.events().iter());
         self.ui_binding.frame(self.ui_data.size, gl, paint);
         //cooldown
         self.sound.cooldown_eh -= dt;
