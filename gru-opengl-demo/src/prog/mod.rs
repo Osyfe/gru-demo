@@ -20,8 +20,14 @@ struct InputData
 
 struct UiData
 {
-    size: Vec2
+    size: Vec2,
+    update_list: bool,
+    index_list: usize,
+    list: Vec<usize>
 }
+
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+struct ResponseKey(Option<usize>);
 
 pub struct Demo
 {
@@ -31,7 +37,7 @@ pub struct Demo
     input: InputData,
     sound: SoundSystem,
     ui_data: UiData,
-    ui: ui::Ui<'static, UiData, String>,
+    ui: ui::Ui<'static, UiData, ResponseKey>,
     ui_binding: ui::Binding,
     cube_resources: ResSys<CubeResources>,
 }
@@ -58,20 +64,38 @@ impl App for Demo
         //ui
         let (ui_data, ui, ui_binding) =
         {
-            let ui_data = UiData { size: Vec2(1.0, 1.0) };
+            let ui_data = UiData { size: Vec2(1.0, 1.0), update_list: true, index_list: 1, list: Vec::new() };
             let ui_binding = ui::Binding::new(gl);
             let font = Font::new(include_bytes!("../res/futuram.ttf"));
             let mut ui = ui::Ui::new(font, |data: &UiData| ui::UiConfig { size: data.size, scale: 1.0, display_scale_factor: 1.0 }); //ignore display scale
+            let register = ui.register();
             
-            use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}};
+            use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}, dynamic::Dynamic};
             use gru_misc::{paint::TextSize};
-            let column = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
-                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(&ui).action(|| println!("Button 1")))
-                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg().response(&ui).query("B2"))
+            let col1 = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
+                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(&register).action(|| println!("Button Action")))
+                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg())
                 .with(Label::new(TextSize::Large, Align::Left).owning("Large"))
                 .align(LayoutAlign::Fill, LayoutAlign::Front)
                 .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
-            ui.add(Split::row([column.boxed(), Label::new(TextSize::Normal, Align::Center).owning("Right side").boxed()], None), |_| true);
+            let col2 = Dynamic::new(&ui, |register: ui::Register<ResponseKey>, data: &mut UiData|
+            {
+                if data.update_list
+                {
+                    data.update_list = false;
+                    let mut col = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill);
+                    for (i, item) in data.list.iter().enumerate()
+                    {
+                        col.add(Label::new(TextSize::Normal, Align::Left).owning(format!("Item no. {}", item)).bg().response(&register).query(&ResponseKey(Some(i))));
+                    }
+                    col.add(Label::new(TextSize::Normal, Align::Left).owning("+").bg().response(&register).query(&ResponseKey(None)));
+                    let col = col
+                        .align(LayoutAlign::Fill, LayoutAlign::Front)
+                        .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
+                    Some(col)
+                } else { None }
+            });
+            ui.add(Split::row([col1.boxed(), col2.boxed()], Some([0.7, 0.3])), |_| true);
 
             (ui_data, ui, ui_binding)
         };
@@ -161,7 +185,22 @@ impl App for Demo
         self.ui_data.size = Vec2(width as f32, height as f32);
         let ui::Frame { paint, query, .. } = self.ui.frame(&mut self.ui_data, self.ui_binding.events().iter());
         self.ui_binding.frame(self.ui_data.size, gl, paint);
-        if query.query("B2").unwrap().clicked.is_some() { println!("Button 2"); }
+        for i in 0..self.ui_data.index_list
+        {
+            if let Some(ui::interact::ResponseState { clicked: Some(_), .. }) = query.query(&ResponseKey(Some(i)))
+            {
+                self.ui_data.list.remove(i);
+                self.ui_data.update_list = true;
+            }
+        }
+        if let Some(ui::interact::ResponseState { clicked: Some(_), .. }) = query.query(&ResponseKey(None))
+        {
+            let index = self.ui_data.index_list;
+            self.ui_data.index_list += 1;
+            self.ui_data.list.push(index);
+            self.ui_data.update_list = true;
+        }
+        
         //cooldown
         self.sound.cooldown_eh -= dt;
         self.sound.cooldown_weh -= dt;
