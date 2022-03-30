@@ -30,7 +30,7 @@ impl SoundSystem{
         if self.cooldown_eh <= 0.0
         {
             self.cooldown_eh = SOUND_COOLDOWN;
-            self.play_audio(self.resources.eh.get(), ctx);
+            self.play_audio(&self.resources.eh, ctx);
         }
     }
 
@@ -39,17 +39,16 @@ impl SoundSystem{
         if self.cooldown_weh <= 0.0
         {
             self.cooldown_weh = SOUND_COOLDOWN;
-            self.play_audio(self.resources.weh.get(), ctx);
+            self.play_audio(&self.resources.weh, ctx);
         }
     }
 
-    fn play_audio(&self, aud: &Audio, ctx: &Context)
+    fn play_audio(&self, audio: &Res<Audio>, ctx: &Context)
     {
-        if self.resources.finished_loading() 
+        if let Some(device) = ctx.audio()
         {
-            if let Some(device) = ctx.audio()
-            {
-                device.play_raw(aud.buffer()).unwrap();
+            if audio.is_loaded() {
+                device.play_raw(audio.get().buffer()).unwrap();
             }
         }
     }
