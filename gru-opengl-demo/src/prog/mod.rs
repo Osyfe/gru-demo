@@ -71,10 +71,10 @@ impl App for Demo
             let register = ui.register();
             
             use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}, dynamic::Dynamic};
-            use gru_misc::{paint::TextSize};
+            use gru_misc::{paint::{TextSize, Color}};
             let col1 = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
                 .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(&register).action(|| println!("Button Action")))
-                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg())
+                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg().style(|st| st.bg.cold = Color::from_discrete_srgb(250, 250, 250, 255)))
                 .with(Label::new(TextSize::Large, Align::Left).owning("Large"))
                 .align(LayoutAlign::Fill, LayoutAlign::Front)
                 .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
