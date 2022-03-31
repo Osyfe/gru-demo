@@ -1,4 +1,4 @@
-use gru_opengl::{resource::{ResSys, ResourceSystem, load::Audio}, impl_ResourceSystem, Context};
+use gru_opengl::{resource::{Res, ResSys, ResourceSystem, load::Audio}, impl_ResourceSystem, Context};
 
 const SOUND_COOLDOWN: f32 = 0.5;
 
