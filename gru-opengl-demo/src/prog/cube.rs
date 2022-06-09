@@ -39,7 +39,6 @@ impl BuildFromGltf for CubeVertex
     }            
 }
 
-
 /*
 pub const fn cube() -> ([u16; 36], [CubeVertex; 24])
 {

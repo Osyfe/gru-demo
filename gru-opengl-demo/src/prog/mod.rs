@@ -70,11 +70,11 @@ impl App for Demo
             let mut ui = ui::Ui::new(font, |data: &UiData| ui::UiConfig { size: data.size, scale: 1.0, display_scale_factor: 1.0 }); //ignore display scale
             let register = ui.register();
             
-            use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}, dynamic::Dynamic};
+            use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}, dynamic::{Dynamic, DynamicContent}};
             use gru_misc::{paint::{TextSize, Color}};
             let col1 = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
-                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg().response(&register).action(|| println!("Button Action")))
-                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg().style(|st| st.bg.cold = Color::from_discrete_srgb(250, 250, 250, 255)))
+                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg_outer().response(&register).action(|| println!("Button Action")))
+                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg_outer().style(|st| st.bg.cold = Color::from_discrete_srgb(250, 250, 250, 255)))
                 .with(Label::new(TextSize::Large, Align::Left).owning("Large"))
                 .align(LayoutAlign::Fill, LayoutAlign::Front)
                 .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
@@ -86,14 +86,14 @@ impl App for Demo
                     let mut col = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill);
                     for (i, item) in data.list.iter().enumerate()
                     {
-                        col.add(Label::new(TextSize::Normal, Align::Left).owning(format!("Item no. {}", item)).bg().response(&register).query(&ResponseKey(Some(i))));
+                        col.add(Label::new(TextSize::Normal, Align::Left).owning(format!("Item no. {}", item)).bg_outer().response(&register).query(&ResponseKey(Some(i))));
                     }
-                    col.add(Label::new(TextSize::Normal, Align::Left).owning("+").bg().response(&register).query(&ResponseKey(None)));
+                    col.add(Label::new(TextSize::Normal, Align::Left).owning("+").bg_outer().response(&register).query(&ResponseKey(None)));
                     let col = col
                         .align(LayoutAlign::Fill, LayoutAlign::Front)
                         .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
-                    Some(col)
-                } else { None }
+                    DynamicContent::Show(col)
+                } else { DynamicContent::Keep }
             });
             ui.add(Split::row([col1.boxed(), col2.boxed()], Some([0.7, 0.3])), |_| true);
 
