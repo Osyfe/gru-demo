@@ -1,5 +1,5 @@
 [package]
-name = "gru-opengl-demo" # rust.name = android application id
+name = "gru-opengl-demo"
 version = "0.1.0"
 authors = ["Jannik Fehre"]
 edition = "2021"
@@ -13,47 +13,11 @@ path = "src/main.rs"
 
 [dependencies]
 gru-opengl = { path = "../../gru-opengl", features = ["fs", "ui", "resource"] }
-gru-misc = { path = "../../gru-misc", features = ["math", "text"] }
+gru-misc = { path = "../../gru-misc", features = ["math"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rodio = { version = "0.14.0", default-features = false, features = ["vorbis"] }
+rodio = { version = "0.15.0", default-features = false, features = ["vorbis"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2.78"
-rodio = { version = "0.14.0", default-features = false, features = ["vorbis", "wasm-bindgen"] }
-
-[target.'cfg(target_os = "android")'.dependencies]
-ndk-glue = "0.3.0" #0.4 is out, but winit uses 0.3
-
-# Android.xml, quite broken for some entries...
-
-[package.metadata.android]
-#build_targets = [ "armv7-linux-androideabi", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android" ] #armv7-linux-androideabi maybe problematic
-resources = "src/res/android"
-assets = "export/data"
-
-fullscreen = true
-orientation = "sensorLandscape"
-installLocation = "preferExternal"
-
-[[package.metadata.android.uses_feature]]
-name = "bla"
-glEsVersion = "0x00020000"
-required = true
-#<uses-feature android:glEsVersion="0x00020000" android:required="true" />
-
-[package.metadata.android.sdk]
-min_sdk_version = 21 #8 for glEs 2, 18 for rustc, 16 for audio, 23 for ndk features?
-target_sdk_version = 23
-max_sdk_version = 28 #30 for ndk features
-
-[package.metadata.android.application]
-debuggable = false
-theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
-icon = "@mipmap/icon"
-label = "Opengl" # App name
-
-[package.metadata.android.application.activity]
-config_changes = "orientation"
-launch_mode = "singleTop"
-#orientation = "landscape"
+wasm-bindgen = "0.2.80"
+rodio = { version = "0.15.0", default-features = false, features = ["vorbis", "wasm-bindgen"] }

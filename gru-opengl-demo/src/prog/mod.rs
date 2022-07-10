@@ -1,6 +1,6 @@
 
-use gru_opengl::{log, App, Context, gl::*, event, ui, resource::{ResSys, ResourceSystem}};
-use gru_misc::{math::*, text::*};
+use gru_opengl::{log, App, Context, gl::*, event, ui::Binding as UiBinding, resource::{ResSys, ResourceSystem}};
+use gru_misc::{math::*, text::*, ui};
 
 mod cube;
 mod sound;
@@ -38,7 +38,7 @@ pub struct Demo
     sound: SoundSystem,
     ui_data: UiData,
     ui: ui::Ui<'static, UiData, ResponseKey>,
-    ui_binding: ui::Binding,
+    ui_binding: UiBinding,
     cube_resources: ResSys<CubeResources>,
 }
 
@@ -65,7 +65,7 @@ impl App for Demo
         let (ui_data, ui, ui_binding) =
         {
             let ui_data = UiData { size: Vec2(1.0, 1.0), update_list: true, index_list: 1, list: Vec::new() };
-            let ui_binding = ui::Binding::new(gl);
+            let ui_binding = UiBinding::new(gl);
             let font = Font::new(include_bytes!("../res/futuram.ttf"));
             let mut ui = ui::Ui::new(font, |data: &UiData| ui::UiConfig { size: data.size, scale: 1.0, display_scale_factor: 1.0 }); //ignore display scale
             let register = ui.register();
@@ -148,27 +148,6 @@ impl App for Demo
                 }
                 self.input.last_pos = position;
             },
-            Event::Touch { position, phase, .. } =>
-            {
-                let (x, y) = position;
-                match phase
-                {
-                    TouchPhase::Started =>
-                    {
-                        self.sound.play_eh(ctx);
-                    },
-                    TouchPhase::Ended => if self.vel.norm() > WEH_VEL { self.sound.play_weh(ctx) },
-                    TouchPhase::Moved =>
-                    {
-                        let (x2, y2) = self.input.last_pos;
-                        let diff = Vec3(y2 - y, x - x2, 0.0);
-                        let vel = ACC * diff.norm().sqrt() + ACC;
-                        self.vel += diff * vel;
-                    },
-                    TouchPhase::Cancelled => {}
-                }
-                self.input.last_pos = position;
-            },
             Event::Key { key: KeyCode::Space, pressed: true } =>
             {
                 ctx.set_fullscreen(!ctx.fullscreen());
@@ -208,9 +187,9 @@ impl App for Demo
         self.vel += (TARGET_ROT - self.vel) * dt;
         self.rot = Rotor::from_axis(self.vel * dt) * self.rot;
         self.rot.fix();
+
         //graphic
         //cube
-        
         let mut rp = gl.render_pass(RenderTarget::Screen, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true });
         if self.cube_resources.finished_loading() {
             let res = &self.cube_resources;
@@ -230,7 +209,7 @@ impl App for Demo
         true
     }
 
-    fn deinit(self, ctx: &mut Context)
+    fn deinit(&mut self, ctx: &mut Context)
     {
         ctx.set_storage("ID", Some(&format!("{}", self.run_id + 1))); //write storage
     }

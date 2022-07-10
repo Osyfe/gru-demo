@@ -1,5 +1,14 @@
 [workspace]
 members = ["gru-opengl-demo", "gru-vulkan-demo"]
 
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package.'*']
+opt-level = 3
+
 [profile.release]
 lto = "fat"
+panic = "abort"
+debug = false
+strip = true
