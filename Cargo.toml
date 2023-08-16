@@ -1,5 +1,6 @@
 [workspace]
-members = ["gru-opengl-demo", "gru-vulkan-demo"]
+members = ["gru-opengl-demo", "gru-vulkan-demo", "gru-script-demo"]
+resolver = "2"
 
 [profile.dev]
 opt-level = 1
@@ -9,6 +10,3 @@ opt-level = 3
 
 [profile.release]
 lto = "fat"
-panic = "abort"
-debug = false
-strip = true

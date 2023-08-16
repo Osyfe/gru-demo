@@ -1,6 +1,6 @@
-
-use gru_opengl::{log, App, Context, gl::*, event, ui::Binding as UiBinding, resource::{ResSys, ResourceSystem}};
-use gru_misc::{math::*, text::*, ui};
+use gru_opengl::{log, App, Context, gl::*, event, ui2::Binding as UiBinding, resource::{ResSys, ResourceSystem}};
+use gru_misc::{math::*, text_sdf::*};
+use gru_ui as ui;
 
 mod cube;
 mod sound;
@@ -18,16 +18,7 @@ struct InputData
     mouse_down: bool
 }
 
-struct UiData
-{
-    size: Vec2,
-    update_list: bool,
-    index_list: usize,
-    list: Vec<usize>
-}
-
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
-struct ResponseKey(Option<usize>);
+type UiData = String;
 
 pub struct Demo
 {
@@ -37,7 +28,7 @@ pub struct Demo
     input: InputData,
     sound: SoundSystem,
     ui_data: UiData,
-    ui: ui::Ui<'static, UiData, ResponseKey>,
+    ui: ui::Ui<'static, UiData>,
     ui_binding: UiBinding,
     cube_resources: ResSys<CubeResources>,
 }
@@ -64,38 +55,13 @@ impl App for Demo
         //ui
         let (ui_data, ui, ui_binding) =
         {
-            let ui_data = UiData { size: Vec2(1.0, 1.0), update_list: true, index_list: 1, list: Vec::new() };
+            let ui_data = "Hello gru_ui!".to_owned();
             let ui_binding = UiBinding::new(gl);
+
+            let label = ui::widget::Label::new().size(5.0);
+
             let font = Font::new(include_bytes!("../res/futuram.ttf"));
-            let mut ui = ui::Ui::new(font, |data: &UiData| ui::UiConfig { size: data.size, scale: 1.0, display_scale_factor: 1.0 }); //ignore display scale
-            let register = ui.register();
-            
-            use ui::{widget::{WidgetExt, Label}, layout::{LayoutAlign, Flex, Split}, dynamic::{Dynamic, DynamicContent}};
-            use gru_misc::{paint::{TextSize, Color}};
-            let col1 = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill)
-                .with(Label::new(TextSize::Small, Align::Right).owning("Small").bg_outer().response(&register).action(|| println!("Button Action")))
-                .with(Label::new(TextSize::Normal, Align::Center).owning("Normal").bg_outer().style(|st| st.bg.cold = Color::from_discrete_srgb(250, 250, 250, 255)))
-                .with(Label::new(TextSize::Large, Align::Left).owning("Large"))
-                .align(LayoutAlign::Fill, LayoutAlign::Front)
-                .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
-            let col2 = Dynamic::new(&ui, |register: ui::Register<ResponseKey>, data: &mut UiData|
-            {
-                if data.update_list
-                {
-                    data.update_list = false;
-                    let mut col = Flex::column(0.5, LayoutAlign::Front, LayoutAlign::Fill);
-                    for (i, item) in data.list.iter().enumerate()
-                    {
-                        col.add(Label::new(TextSize::Normal, Align::Left).owning(format!("Item no. {}", item)).bg_outer().response(&register).query(&ResponseKey(Some(i))));
-                    }
-                    col.add(Label::new(TextSize::Normal, Align::Left).owning("+").bg_outer().response(&register).query(&ResponseKey(None)));
-                    let col = col
-                        .align(LayoutAlign::Fill, LayoutAlign::Front)
-                        .padding(Vec2(1.0, 1.0), Vec2(1.0, 1.0));
-                    DynamicContent::Show(col)
-                } else { DynamicContent::Keep }
-            });
-            ui.add(Split::row([col1.boxed(), col2.boxed()], Some([0.7, 0.3])), |_| true);
+            let ui = ui::Ui::new(font, label);
 
             (ui_data, ui, ui_binding)
         };
@@ -117,7 +83,8 @@ impl App for Demo
 
     fn input(&mut self, ctx: &mut Context, event: event::Event)
     {
-        self.ui_binding.event(self.ui_data.size, &event);
+        let (width, height) = ctx.window_dims();
+        self.ui_binding.event(Vec2(width as f32, height as f32), &event);
         use event::*;
         match event
         {
@@ -161,24 +128,15 @@ impl App for Demo
         let (width, height) = ctx.window_dims();
         let gl = ctx.gl();
         //ui
-        self.ui_data.size = Vec2(width as f32, height as f32);
-        let ui::Frame { paint, query, .. } = self.ui.frame(&mut self.ui_data, self.ui_binding.events().iter());
-        self.ui_binding.frame(self.ui_data.size, gl, paint);
-        for i in 0..self.ui_data.index_list
+        let size = Vec2(width as f32, height as f32);
+        let ui_config = ui::UiConfig
         {
-            if let Some(ui::interact::ResponseState { clicked: Some(_), .. }) = query.query(&ResponseKey(Some(i)))
-            {
-                self.ui_data.list.remove(i);
-                self.ui_data.update_list = true;
-            }
-        }
-        if let Some(ui::interact::ResponseState { clicked: Some(_), .. }) = query.query(&ResponseKey(None))
-        {
-            let index = self.ui_data.index_list;
-            self.ui_data.index_list += 1;
-            self.ui_data.list.push(index);
-            self.ui_data.update_list = true;
-        }
+            size,
+            scale: 1.0,
+            display_scale_factor: 1.0 //ignore here...
+        };
+        let ui::Frame { paint, .. } = self.ui.frame(ui_config, &mut self.ui_data, self.ui_binding.events().iter());
+        self.ui_binding.frame(size, gl, paint);
         
         //cooldown
         self.sound.cooldown_eh -= dt;

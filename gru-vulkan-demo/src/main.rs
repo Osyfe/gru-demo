@@ -1,8 +1,8 @@
 //no console
-#![windows_subsystem = "windows"]
+//#![windows_subsystem = "windows"]
 
 use gru_vulkan::*;
-use gru_misc::{math::*, text::*, time::*};
+use gru_misc::{math::*, text_sdf::*, time::*};
 use winit::{*, event_loop::ControlFlow, event::{VirtualKeyCode, MouseButton, ElementState}};
 
 //compile glsl to spirv statically!
@@ -49,9 +49,9 @@ fn main()
     {
         let font = Font::new(include_bytes!("res/futuram.ttf"));
         let chars = &Font::all_letters() | &Font::text_special_characters();
-        let (atlas_data, atlas) = Atlas::new(font, chars, 200.0, ATLAS_SIZE, 5);
+        let (atlas_data, atlas) = Atlas::new(font, 64.0, chars, ATLAS_SIZE, 5);
         let atlas_image_type = ImageType { channel: ImageChannelType::RUnorm, width: ATLAS_SIZE, height: ATLAS_SIZE, layers: Some(atlas_data.len() as u32) };
-        let atlas_image = device.new_image(atlas_image_type, ImageUsage::Texture { mipmapping: true });
+        let atlas_image = device.new_image(atlas_image_type, ImageUsage::Texture { mipmapping: false });
         let mut atlas_buffer = device.new_image_buffer(atlas_image_type);
         let mut fence = device.new_fence(false);
         for i in 0..atlas_data.len()
@@ -66,26 +66,34 @@ fn main()
     //text data
     let mut indices = Vec::new();
     let mut vertices = Vec::new();
+    [0, 1, 2, 2, 3, 0].into_iter().for_each(|i| indices.push(i));
+    [
+        Char { position: (0.0, 0.0).into(), coords: (0.0, 0.0, -1.0).into() },
+        Char { position: (0.0, 1.0).into(), coords: (0.0, 0.0, -1.0).into() },
+        Char { position: (20.0, 1.0).into(), coords: (0.0, 0.0, -1.0).into() },
+        Char { position: (20.0, 0.0).into(), coords: (0.0, 0.0, -1.0).into() }
+    ].into_iter().for_each(|v| vertices.push(v));
     let TextData { index_count, line_count, .. } = atlas.text
     (
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
         Layout { width: TEXT_WIDTH, align: Align::Block, auto_wrap: true },
-        |i| indices.push(i),
+        |i| indices.push(i + 4),
         |c, p| vertices.push(Char { position: p.into(), coords: (c.0, c.1, c.2 as f32).into() })
     );
     //text data upload
     let mut buffer_type = device.new_buffer_type();
     let index_view = buffer_type.add_indices(indices.len() as u32);
     let vertex_view = buffer_type.add_attributes(vertices.len() as u32);
+    let buffer_type = buffer_type.build();
     let text_buffer =
     {
-        let mut stage_buffer = device.new_buffer(&mut buffer_type, BufferUsage::Stage);
+        let mut stage_buffer = device.new_buffer(&buffer_type, BufferUsage::Stage);
         {
             let mut map = stage_buffer.map();
             map.write_indices(&index_view, 0, &indices);
             map.write_attributes(&vertex_view, 0, &vertices);
         }
-        let text_buffer = device.new_buffer(&mut buffer_type, BufferUsage::Static);
+        let text_buffer = device.new_buffer(&buffer_type, BufferUsage::Static);
         command_pool.new_command_buffer().copy_buffer(&queue, &stage_buffer, &text_buffer, device.new_fence(false)).mark.wait();
         text_buffer
     };
@@ -93,9 +101,10 @@ fn main()
     let mut cam = Camera::new(width as f32 / height as f32, line_count as f32);
     let mut buffer_type = device.new_buffer_type();
     let cam_view = buffer_type.add_uniforms(1);
-    let mut cam_buffers = swapchain.new_objects(&mut |_| device.new_buffer(&mut buffer_type, BufferUsage::Dynamic));
+    let buffer_type = buffer_type.build();
+    let mut cam_buffers = swapchain.new_objects(&mut |_| device.new_buffer(&buffer_type, BufferUsage::Dynamic));
     //sampler
-    let sampler = device.new_sampler(&SamplerInfo
+    let sampler = device.new_sampler(SamplerInfo
     {
         min_filter: SamplerFilter::Linear,
         mag_filter: SamplerFilter::Linear,
@@ -120,7 +129,7 @@ fn main()
     //renderpass (assumes some level of MSAA)
     let render_pass = device.new_render_pass
     (
-        &[&RenderPassColorAttachment::Image
+        &[RenderPassColorAttachment::Image
         {
             image_channel_type: Swapchain::IMAGE_CHANNEL_TYPE,
             samples: MSAA,
@@ -129,8 +138,8 @@ fn main()
             initial_layout: ImageLayout::Undefined,
             final_layout: ImageLayout::Attachment
         },
-        &RenderPassColorAttachment::Swapchain(SwapchainLoad::DontCare)],
-        Some(&RenderPassDepthAttachment
+        RenderPassColorAttachment::Swapchain(SwapchainLoad::DontCare)],
+        Some(RenderPassDepthAttachment
         {
             image_channel_type: ImageChannelType::DSfloat,
             samples: MSAA,
@@ -139,7 +148,7 @@ fn main()
             initial_layout: ImageLayout::Undefined,
             final_layout: ImageLayout::Attachment
         }),
-        &[&Subpass
+        &[Subpass
         {
             input_attachments: &[],
             output_attachments: &[OutputAttachment { attachment_index: 0, fragment_out_location: 0 }],
@@ -147,7 +156,7 @@ fn main()
             depth_attachment: true
         }]
     );
-    let framebuffers = swapchain.new_objects(&mut |index| device.new_framebuffer(&render_pass, &[&FramebufferAttachment::Image(&color_buffer), &FramebufferAttachment::Swapchain(swapchain.get_image(index)), &FramebufferAttachment::Image(&depth_buffer)]));
+    let framebuffers = swapchain.new_objects(&mut |index| device.new_framebuffer(&render_pass, &[FramebufferAttachment::Image(&color_buffer), FramebufferAttachment::Swapchain(swapchain.get_image(index)), FramebufferAttachment::Image(&depth_buffer)]));
     //pipeline
     let pipeline_layout = device.new_pipeline_layout(&[&descriptor_layout], None);
     let pipeline_info = PipelineInfo
@@ -162,7 +171,7 @@ fn main()
         depth_test: true,
         blend: true
     };
-    let pipeline = device.new_pipeline(&render_pass, 0, VERTEX, FRAGMENT, &[&AttributeGroupInfo::from::<Char>()], &pipeline_layout, &pipeline_info);
+    let pipeline = device.new_pipeline(&render_pass, 0, VERTEX, FRAGMENT, &[AttributeGroupInfo::from::<Char>()], &pipeline_layout, &pipeline_info);
     //command buffers (we reuse them throughout the program)
     let mut command_buffers = swapchain.new_objects(&mut |_| command_pool.new_command_buffer());
     for ((command_buffer, framebuffer), descriptor) in command_buffers.iter_mut().zip(framebuffers.iter()).zip(descriptors.iter())
@@ -172,9 +181,9 @@ fn main()
             .render_pass(&render_pass, &framebuffer)
             .bind_descriptor_sets(&pipeline_layout, &[&descriptor])
             .bind_pipeline(&pipeline)
-            .bind_indices(&IndexBinding::from(&text_buffer, &index_view))
-            .bind_attributes(0, [&AttributeBinding::from(&text_buffer, &vertex_view)])
-            .draw(&DrawMode::index(index_count));
+            .bind_indices(IndexBinding::from(&text_buffer, &index_view))
+            .bind_attributes(0, [AttributeBinding::from(&text_buffer, &vertex_view)])
+            .draw(DrawMode::index(index_count));
     }
     //synchronization elements
     let image_available = swapchain.new_cycle(&mut || device.new_semaphore());
