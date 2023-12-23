@@ -1,2 +1,0 @@
-opengl:
-	- ndk 0.3 vs 0.4

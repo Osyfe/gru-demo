@@ -1,6 +1,7 @@
-use gru_opengl::{log, App, Context, gl::*, event, ui2::Binding as UiBinding, resource::{ResSys, ResourceSystem}};
+use gru_opengl::{log, App, Context, gl::*, event, ui::Binding as UiBinding, resource::{ResSys, ResourceSystem}};
 use gru_misc::{math::*, text_sdf::*};
 use gru_ui as ui;
+use ui::event::*;
 
 mod cube;
 mod sound;
@@ -20,6 +21,12 @@ struct InputData
 
 type UiData = String;
 
+#[derive(Clone)]
+enum UiTag
+{
+    Button
+}
+
 pub struct Demo
 {
     run_id: u64,
@@ -28,7 +35,7 @@ pub struct Demo
     input: InputData,
     sound: SoundSystem,
     ui_data: UiData,
-    ui: ui::Ui<'static, UiData>,
+    ui: ui::Ui<'static, UiData, UiTag>,
     ui_binding: UiBinding,
     cube_resources: ResSys<CubeResources>,
 }
@@ -40,7 +47,7 @@ impl App for Demo
 	fn init(ctx: &mut Context, _: Self::Init) -> Self
 	{
         gru_opengl::log("init app");
-        ctx.set_title("gru_opengl_demo");
+        ctx.set_title("gru_opengl_demo: Cube");
         //read storage
         let run_id = match ctx.get_storage("ID")
         {
@@ -57,11 +64,9 @@ impl App for Demo
         {
             let ui_data = "Hello gru_ui!".to_owned();
             let ui_binding = UiBinding::new(gl);
-
-            let label = ui::widget::Label::new().size(5.0);
-
-            let font = Font::new(include_bytes!("../res/futuram.ttf"));
-            let ui = ui::Ui::new(font, label);
+            let widget = ui();
+            let font = Font::new(include_bytes!("../res/Latinia.ttf"));
+            let ui = ui::Ui::new(font, widget);
 
             (ui_data, ui, ui_binding)
         };
@@ -84,7 +89,6 @@ impl App for Demo
     fn input(&mut self, ctx: &mut Context, event: event::Event)
     {
         let (width, height) = ctx.window_dims();
-        self.ui_binding.event(Vec2(width as f32, height as f32), &event);
         use event::*;
         match event
         {
@@ -97,36 +101,14 @@ impl App for Demo
                     self.sound.resources.add_file_event(file, ctx.gl());
                 }
             Event::File(Err(err)) => log(err.as_str()),
-            Event::Click { button: MouseButton::Left, pressed } =>
-            {
-                self.input.mouse_down = pressed;
-                if self.input.mouse_down { self.sound.play_eh(ctx) }
-                else if self.vel.norm() > WEH_VEL { self.sound.play_weh(ctx); }
-            },
-            Event::Cursor { position } =>
-            {
-                let (x, y) = position;
-                let (x2, y2) = self.input.last_pos;
-                if self.input.mouse_down
-                {
-                    let diff = Vec3(y2 - y, x - x2, 0.0);
-                    let vel = ACC * diff.norm().sqrt() + ACC;
-                    self.vel += diff * vel;
-                }
-                self.input.last_pos = position;
-            },
-            Event::Key { key: KeyCode::Space, pressed: true } =>
-            {
-                ctx.set_fullscreen(!ctx.fullscreen());
-            },
-            _ => {}
+            _ => { self.ui_binding.event(Vec2(width as f32, height as f32), &event); }
         }
     }
 
     fn frame(&mut self, ctx: &mut Context, dt: f32) -> bool
     {
         let (width, height) = ctx.window_dims();
-        let gl = ctx.gl();
+        
         //ui
         let size = Vec2(width as f32, height as f32);
         let ui_config = ui::UiConfig
@@ -135,13 +117,54 @@ impl App for Demo
             scale: 1.0,
             display_scale_factor: 1.0 //ignore here...
         };
-        let ui::Frame { paint, .. } = self.ui.frame(ui_config, &mut self.ui_data, self.ui_binding.events().iter());
+        let ui::Frame { paint, events, .. } = self.ui.frame(ui_config, &mut self.ui_data, self.ui_binding.events().iter());
+        for event in events
+        {
+            match event
+            {
+                Event::Hardware(pod) => if !pod.used
+                {
+                    match pod.event
+                    {
+                        HardwareEvent::PointerClicked { button: MouseButton::Primary, pressed, .. } =>
+                        {
+                            self.input.mouse_down = pressed;
+                            if self.input.mouse_down { self.sound.play_eh(ctx) }
+                            else if self.vel.norm() > WEH_VEL { self.sound.play_weh(ctx); }
+                        },
+                        HardwareEvent::PointerMoved { pos, .. } =>
+                        {
+                            let Vec2(x, y) = pos;
+                            let (x2, y2) = self.input.last_pos;
+                            if self.input.mouse_down
+                            {
+                                let diff = Vec3(y - y2, x - x2, 0.0);
+                                let vel = ACC * diff.norm().sqrt() + ACC;
+                                self.vel += diff * vel;
+                            }
+                            self.input.last_pos = (x, y);
+                        },
+                        HardwareEvent::Key { key: Key::Space, pressed: true } =>
+                        {
+                            ctx.set_fullscreen(!ctx.fullscreen());
+                        },
+                        _ => {}
+                    }
+                },
+                Event::Logic(event) => match event
+                {
+                    LogicEvent::Clicked(UiTag::Button, MouseButton::Primary) => println!("hello ui event"),
+                    _ => {}
+                }
+            }
+        }
+        let gl = ctx.gl();
         self.ui_binding.frame(size, gl, paint);
         
         //cooldown
         self.sound.cooldown_eh -= dt;
         self.sound.cooldown_weh -= dt;
-        //physik
+        //physics
         self.vel += (TARGET_ROT - self.vel) * dt;
         self.rot = Rotor::from_axis(self.vel * dt) * self.rot;
         self.rot.fix();
@@ -149,7 +172,8 @@ impl App for Demo
         //graphic
         //cube
         let mut rp = gl.render_pass(RenderTarget::Screen, RenderPassInfo { clear_color: Some((0.2, 0.1, 0.8)), clear_depth: true });
-        if self.cube_resources.finished_loading() {
+        if self.cube_resources.finished_loading()
+        {
             let res = &self.cube_resources;
             let mat = 
                 Mat4::perspective_opengl(width as f32 / height as f32, std::f32::consts::FRAC_PI_8, 7.0, 10.0)
@@ -171,4 +195,17 @@ impl App for Demo
     {
         ctx.set_storage("ID", Some(&format!("{}", self.run_id + 1))); //write storage
     }
+}
+
+fn ui() -> impl ui::Widget<UiData, UiTag>
+{
+    use ui::widget::{WidgetExt, primitive::*, layout::*};
+
+    let col = Flex::column()
+        .with(Label::new().size(3.0))
+        .with(Label::new().size(5.0).bg().response().event(UiTag::Button).align().horizontal(AlignLayout::Back))
+        .with(Label::new().size(1.0))
+        .layout(FlexLayout::PadAll);
+
+    col
 }

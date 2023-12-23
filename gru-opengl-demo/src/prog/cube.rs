@@ -1,5 +1,5 @@
-
 use gru_opengl::{resource::load::{Model, TextureLoadConfig} , gl::{Shader, Texture, TextureChannel, TextureWrap}, impl_ResourceSystem};
+
 impl_ResourceSystem!(CubeResources = 
     (model, Model<CubeVertex>, "cube", ()),
     (shader, Shader<CubeVertex>, "cube", ()),
@@ -29,14 +29,15 @@ impl AttributesReprCpacked for CubeVertex
 
 impl BuildFromGltf for CubeVertex 
 {
-    fn build(vd: VertexData) -> Self {
+    fn build(vd: VertexData) -> Self
+    {
         Self 
         {
             position: vd.position,
             color: vd.color,
             tex_coords: [vd.tex_coord[0] * 0.6, vd.tex_coord[1] * 0.6],  
         }
-    }            
+    }
 }
 
 /*

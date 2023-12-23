@@ -1,0 +1,5 @@
+Billow -> Wolken
+Fbm -> Realismus
+Value -> Würfel
+
+HybridMulti, OpenSimplex, Perlin, SuperSimplex

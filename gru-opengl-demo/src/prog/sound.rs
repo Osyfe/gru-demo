@@ -47,7 +47,8 @@ impl SoundSystem{
     {
         if let Some(device) = ctx.audio()
         {
-            if audio.is_loaded() {
+            if audio.is_loaded()
+            {
                 device.play_raw(audio.get().buffer()).unwrap();
             }
         }

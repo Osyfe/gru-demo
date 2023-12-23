@@ -1,12 +1,12 @@
 #version 450 core
 
-#define SIG 0.02
+#include "text.glsl"
 
-layout (location=0) in vec3 tex_coords;
+layout (location=0) in vec3 coords;
 
 layout (location=0) out vec4 frag_color;
 
-layout (set=0, binding=1) uniform sampler2DArray tex;
+layout (set=0, binding=1) uniform sampler2DArray atlas;
 
 float contour(float d, float w)
 {
@@ -15,16 +15,16 @@ float contour(float d, float w)
 
 float samp(vec3 uv, float w)
 {
-    return contour(texture(tex, uv).r, w);
+    return contour(texture(atlas, uv).r, w);
 }
 
 void main()
 {
-    if(tex_coords.p < -0.5) frag_color = vec4(0.2, 0.2, 0.6, 1.0);
+    if(coords.p < -0.5) frag_color = vec4(0.2, 0.2, 0.6, 1.0);
     else
     {
-        vec3 uv = tex_coords;
-        float dist = texture(tex, uv).r;
+        vec3 uv = coords;
+        float dist = texture(atlas, uv).r;
         float width = fwidth(dist);
         float alpha = contour(dist, width);
         float dscale = 0.354; //half of 1/sqrt2
@@ -38,7 +38,7 @@ void main()
         alpha = (alpha + 0.5 * asum) / 3.0;
         frag_color = vec4(0.0, 0.1, 0.8, alpha);
 
-        //float sd = texture(tex, tex_coords).r;
+        //float sd = texture(tex, coords).r;
         //float alpha = smoothstep(0.5 - SIG, 0.5 + SIG, sd);
         //frag_color = vec4(0.0, 0.1, 0.8, alpha);
     }
