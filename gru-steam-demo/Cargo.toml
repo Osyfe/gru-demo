@@ -1,0 +1,10 @@
+[package]
+name = "gru-steam-demo"
+version = "0.1.0"
+authors = ["Jannik Fehre", "Fabian Osyguß"]
+edition = "2021"
+
+[dependencies]
+steamworks = { version = "0.10.0", features = ["raw-bindings"] }
+gru-opengl = { path = "../../gru-opengl", features = ["ui"] }
+gru-ui = { path = "../../gru-ui" }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["gru-opengl-demo", "gru-vulkan-demo", "gru-script-demo"]
+members = ["gru-opengl-demo", "gru-vulkan-demo", "gru-script-demo", "gru-steam-demo"]
 resolver = "2"
 
 [profile.dev]
