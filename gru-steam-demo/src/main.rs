@@ -1,8 +1,8 @@
+mod steam_utils;
 mod lobby;
 
 use gru_opengl::{Context, App, event as raw_event, gl, ui as ui_binding};
 use gru_ui::{self as ui, math::Vec2, event};
-use steamworks as steam;
 
 enum State
 {
@@ -15,7 +15,7 @@ enum State
 struct Data
 {
     state: State,
-    steam: steam::Client,
+    steam: steam_utils::SteamInit,
 }
 
 #[derive(Clone, Copy)]
@@ -30,16 +30,16 @@ struct Game
     ui: ui::Ui<'static, Data, EventTag>,
     binding: ui_binding::Binding,
     data: Data,
-    steam_callbacks: (steam::SingleClient, Vec<steam::CallbackHandle>),
 }
 
 impl App for Game
 {
-    type Init = (steam::Client, (steam::SingleClient, Vec<steam::CallbackHandle>));
+    type Init = steam_utils::SteamInit;
 
-    fn init(ctx: &mut Context, (steam, steam_callbacks): Self::Init) -> Self
+    fn init(ctx: &mut Context, steam: Self::Init) -> Self
     {
         ctx.set_title("gru_steam_demo: Rock Paper Scissor");
+        ctx.set_window_dims((1600, 900));
         let font = ui::text::Font::new(include_bytes!("../res/Latinia.ttf"));
         let ui = ui::Ui::new(font, ui());
         let binding = ui_binding::Binding::new(ctx.gl());
@@ -48,7 +48,7 @@ impl App for Game
             state: State::Menu,
             steam,
         };
-        Self { ui, binding, data, steam_callbacks }
+        Self { ui, binding, data }
     }
 
     fn input(&mut self, ctx: &mut Context, event: raw_event::Event)
@@ -57,15 +57,14 @@ impl App for Game
         self.binding.event(Vec2(width as f32, height as f32), &event);
     }
 
-    fn frame(&mut self, ctx: &mut Context, dt: f32) -> bool
+    fn frame(&mut self, ctx: &mut Context, _: f32) -> bool
     {
         let (width, height) = ctx.window_dims();
         let size = Vec2(width as f32, height as f32);
 
-        let ui::Frame { paint, events, request, .. } = self.ui.frame(ui::UiConfig { size, scale: 1.0, display_scale_factor: 1.0 }, &mut self.data, self.binding.events().into_iter());
-        for event in events { self.data.event(ctx, event); }
-
-        self.steam_callbacks.0.run_callbacks();
+        let ui::Frame { paint, events, .. } = self.ui.frame(ui::UiConfig { size, scale: 1.0, display_scale_factor: 1.0 }, &mut self.data, self.binding.events().into_iter());
+        for event in events { self.data.ui_event(ctx, event); }
+        self.data.steam_events();
 
         let gl = ctx.gl();
         self.binding.frame(size, gl, paint);
@@ -77,13 +76,12 @@ impl App for Game
 
     fn deinit(&mut self, _: &mut Context)
     {
-        
     }
 }
 
 impl Data
 {
-    fn event(&mut self, ctx: &mut Context, event: &mut event::Event<EventTag>)
+    fn ui_event(&mut self, ctx: &mut Context, event: &mut event::Event<EventTag>)
     {
         match event
         {
@@ -101,16 +99,37 @@ impl Data
             {
                 EventTag::CreateLobby =>
                 {
-                    let lobby = lobby::LobbyData::new(&self.steam);
-                    self.state = State::Lobby(lobby);
+                    if let Some(lobby) = lobby::LobbyData::new(&self.steam.client)
+                    {
+                        self.state = State::Lobby(lobby);
+                    }
                 },
                 EventTag::LeaveLobby =>
                 {
                     if let State::Lobby(lobby) = &mut self.state { lobby.leave(); }
                     else { unreachable!(); }
+                    self.state = State::Menu;
                 },
             },
             _ => {},
+        }
+    }
+
+    fn steam_events(&mut self)
+    {
+        use steam_utils::SteamEvent as Event;
+        for event in self.steam.events.try_iter()
+        {
+            match event
+            {
+                Event::JoinLobby(id) =>
+                {
+                    if let Some(lobby) = lobby::LobbyData::join(&self.steam.client, id)
+                    {
+                        self.state = State::Lobby(lobby);
+                    }
+                }
+            }
         }
     }
 }
@@ -145,16 +164,7 @@ fn ui() -> impl ui::Widget<Data, EventTag>
         .pad().vertical(1.0)
 }
 
-fn steam_callbacks(steam: &steam::Client) -> Vec<steam::CallbackHandle>
-{
-    let lobby = steam.register_callback(|event: steam::GameLobbyJoinRequested| println!("lobby id: {:?}, friend id: {:?}", event.lobby_steam_id, event.friend_steam_id));
-    vec![lobby]
-}
-
 fn main()
 {
-    let (client, single) = steam::Client::init().unwrap();
-    client.utils().set_overlay_notification_position(steam::NotificationPosition::BottomRight);
-    let callbacks = steam_callbacks(&client);
-    gru_opengl::start::<Game>((client, (single, callbacks)));
+    steam_utils::run(|client| gru_opengl::start::<Game>(client));
 }
