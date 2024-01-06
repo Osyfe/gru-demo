@@ -1,31 +1,6 @@
 use steamworks as steam;
 use std::sync::mpsc;
 
-struct CBDriver(mpsc::SyncSender<()>);
-
-impl CBDriver
-{
-    fn start(single: steam::SingleClient) -> Self
-    {
-        let (send, recv) = mpsc::sync_channel(1);
-        std::thread::spawn(move ||
-        {
-            loop
-            {
-                single.run_callbacks();
-                std::thread::sleep(std::time::Duration::from_millis(16));
-                if recv.try_recv().is_ok() { break; }
-            }
-        });
-        Self(send)
-    }
-
-    fn stop(self)
-    {
-        self.0.send(()).unwrap();
-    }
-}
-
 pub enum SteamEvent
 {
     JoinLobby(steam::LobbyId),
@@ -50,6 +25,31 @@ pub fn run<F: FnOnce(SteamInit)>(f: F)
     let driver = CBDriver::start(single);
     f(init);
     driver.stop();
+}
+
+struct CBDriver(mpsc::SyncSender<()>);
+
+impl CBDriver
+{
+    fn start(single: steam::SingleClient) -> Self
+    {
+        let (send, recv) = mpsc::sync_channel(1);
+        std::thread::spawn(move ||
+        {
+            loop
+            {
+                single.run_callbacks();
+                std::thread::sleep(std::time::Duration::from_millis(16));
+                if recv.try_recv().is_ok() { break; }
+            }
+        });
+        Self(send)
+    }
+
+    fn stop(self)
+    {
+        self.0.send(()).unwrap();
+    }
 }
 
 pub struct BlockOn<T: 'static + Send>(mpsc::SyncSender<T>);
