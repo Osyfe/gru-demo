@@ -2,6 +2,7 @@ mod ui_utils;
 mod data;
 mod steam_utils;
 mod lobby;
+mod game;
 
 use gru_opengl::{Context, App, event as raw_event, gl, ui as ui_binding};
 use gru_ui::{self as ui, math::Vec2, event};
