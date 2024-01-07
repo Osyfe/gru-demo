@@ -1,9 +1,12 @@
 use steamworks as steam;
 use std::sync::mpsc;
 
+use crate::game::Symbol;
+
 pub enum SteamEvent
 {
     JoinLobby(steam::LobbyId),
+    Pick(Symbol)
 }
 
 pub struct SteamInit

@@ -1,17 +1,17 @@
 #[derive(Debug, Clone, Copy)]
-enum Symbol {
+pub enum Symbol {
     Rock,
     Paper,
     Scissor,
 }
 
-struct Round {
+pub struct Round {
     pub index: u32,
     pub your_symbol: Option<Symbol>,
     opp_symbol: Option<Symbol>,
 }
 
-struct Game {
+pub struct Game {
     pub players: (String, String),
     pub max_round: u32,
     pub current_round: Round,

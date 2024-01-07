@@ -1,4 +1,4 @@
-use super::{data::{State, Data}, ui::{Widget, widget::{WidgetExt, layout::*, primitive::*, compose::*, dynamic::*}}};
+use super::{data::{State, Data}, ui::{Widget, widget::{WidgetExt, layout::*, primitive::*, compose::*, dynamic::*}}, game::Symbol};
 
 #[derive(Clone, Copy)]
 pub enum EventTag
@@ -6,6 +6,7 @@ pub enum EventTag
     CreateLobby,
     LeaveLobby,
     StartMatch,
+    Pick(Symbol)
 }
 
 pub fn build() -> impl Widget<Data, EventTag>
@@ -44,9 +45,14 @@ pub fn build() -> impl Widget<Data, EventTag>
         .align()
         .pad().horizontal(1.0).vertical(1.0);
 
+    let game = Set::new().
+        with(Label::new().own("In Game"));
+        //turn count //score //pick options
+
     let set = Set::new()
         .with(menu.maybe(|data: &mut Data| matches!(data.state, State::Menu)))
-        .with(lobby.maybe(|data: &mut Data| matches!(data.state, State::Lobby(_))));
+        .with(lobby.maybe(|data: &mut Data| matches!(data.state, State::Lobby(_))))
+        .with(game.maybe(|data: &mut Data| matches!(data.state, State::Match(_))));
 
     Flex::column()
         .with(Label::new().size(3.0).own("Rock Paper Scissors").align().center_h())

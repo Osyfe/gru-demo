@@ -1,11 +1,14 @@
+use crate::game::Symbol;
+
 use super::*;
 use ui_utils::EventTag;
+use game::Game as Match;
 
 pub enum State
 {
     Menu,
     Lobby(lobby::LobbyData),
-    Match,
+    Match(Match),
     End,
 }
 
@@ -62,7 +65,21 @@ impl Data
                         if lobby.members.len() == 2
                         {
                             todo!();
-                        } else { println!("You need 2 players to play!"); }
+                        } else 
+                        { 
+                            println!("You need 2 players to play!");
+                            self.state = State::Match(Match::new(3, "You".to_string(), "Opponent".to_string()))
+                        }
+                    } else { unreachable!(); }
+                }
+                EventTag::Pick(symbol) => 
+                {
+                    if let State::Match(Match{ current_round, .. }) = &mut self.state
+                    {
+                        if current_round.your_turn(*symbol)
+                        {
+                            todo!("Picked Symbol");
+                        }
                     } else { unreachable!(); }
                 }
             },
@@ -84,6 +101,16 @@ impl Data
                         self.state = State::Lobby(lobby);
                     }
                 }
+                Event::Pick(symbol) => 
+                {
+                    if let State::Match(Match{ current_round, .. }) = &mut self.state
+                    {
+                        if current_round.opp_turn(symbol)
+                        {
+                            todo!("Recieved Symbol");
+                        }
+                    } else { unreachable!(); }
+                },
             }
         }
     }
