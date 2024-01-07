@@ -18,6 +18,7 @@ pub struct Game {
     pub scores: (u32, u32),
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Victor {
     You,
     Opp,
