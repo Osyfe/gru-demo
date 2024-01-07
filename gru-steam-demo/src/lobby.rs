@@ -5,16 +5,18 @@ type Manager = steam::ClientManager;
 
 pub struct LobbyData
 {
+    your_id: steam::SteamId,
     matchmaking: steam::Matchmaking<Manager>,
     friends: steam::Friends<Manager>,
     lobby: steam::LobbyId,
-    pub members: Vec<String>,
+    pub members: Vec<(steam::SteamId, String)>,
 }
 
 impl LobbyData
 {
     pub fn join(client: &steam::Client, lobby: Option<steam::LobbyId>) -> Option<Self>
     {
+        let your_id = client.user().steam_id();
         let matchmaking = client.matchmaking();
         let friends = client.friends();
         fn print_error<E: std::fmt::Debug>(error: E) { println!("{error:?}"); }
@@ -22,7 +24,7 @@ impl LobbyData
         {
             None => BlockOn::with(|block| matchmaking.create_lobby(steam::LobbyType::FriendsOnly, 2, block.cb())).map_err(print_error),
             Some(lobby) => BlockOn::with(|block| matchmaking.join_lobby(lobby, block.cb())).map_err(print_error),
-        }.ok().map(|lobby| Self { matchmaking, friends, lobby, members: Vec::new() })
+        }.ok().map(|lobby| Self { your_id, matchmaking, friends, lobby, members: Vec::new() })
     }
 
     pub fn leave(&mut self)
@@ -52,7 +54,8 @@ impl LobbyData
         for member in list
         {
             let name = self.friends.get_friend(member).name();
-            self.members.push(name);
+            if member == self.your_id { self.members.insert(0, (member, name)); }
+            else { self.members.push((member, name)); }
         }
     }
 }

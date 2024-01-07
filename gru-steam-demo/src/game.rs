@@ -1,35 +1,42 @@
-#[derive(Debug, Clone, Copy)]
-pub enum Symbol {
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Symbol
+{
     Rock,
     Paper,
     Scissor,
 }
 
-pub struct Round {
-    pub index: u32,
+pub struct Round
+{
     pub your_symbol: Option<Symbol>,
     opp_symbol: Option<Symbol>,
 }
 
-pub struct Game {
+pub struct Match
+{
     pub players: (String, String),
-    pub max_round: u32,
-    pub current_round: Round,
+    pub target_score: u32,
     pub scores: (u32, u32),
+    pub current_round: Round,
+    pub last_round: Option<(Symbol, Symbol)>,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Victor {
+pub enum Victor
+{
     You,
     Opp,
     Tie,
 }
 
-impl Round {
-    fn new(index: u32) -> Self
+impl Round
+{
+    fn new() -> Self
     {
-        Self {
-            index,
+        Self
+        {
             your_symbol: None,
             opp_symbol: None,
         }
@@ -68,10 +75,11 @@ impl Round {
     }
 }
 
-impl Game {
-    pub fn new(max_round: u32, you: String, opponent: String) -> Self
+impl Match
+{
+    pub fn new(target_score: u32, you: String, opponent: String) -> Self
     {
-        Self { players: (you, opponent), max_round, current_round: Round::new(0), scores: (0,0) }
+        Self { players: (you, opponent), target_score, scores: (0,0), current_round: Round::new(), last_round: None }
     }
 
     pub fn next_round(&mut self) -> Option<Victor>
@@ -84,8 +92,12 @@ impl Game {
                 Victor::Opp => self.scores.1 += 1,
                 Victor::Tie => {},
             }
-
-            self.victor().or_else(|| {self.current_round = Round::new(self.current_round.index + 1); None})
+            self.victor().or_else(||
+            {
+                self.last_round = self.current_round.your_symbol.zip(self.current_round.opp_symbol);
+                self.current_round = Round::new();
+                None
+            })
         } else
         {
             None
@@ -94,22 +106,14 @@ impl Game {
 
     pub fn victor(&self) -> Option<Victor>
     {
-        let posible_points = self.max_round - self.current_round.index;
-        let max_scores = (self.scores.0 + posible_points, self.scores.1 + posible_points);
-
-        if max_scores.0 < self.scores.1
-        {
-            Some(Victor::Opp)
-        } 
-        else if max_scores.1 < self.scores.0
+        if self.scores.0 >= self.target_score
         {
             Some(Victor::You)
-        }
-        else if posible_points == 0
+        } 
+        else if self.scores.1 >= self.target_score
         {
-            Some(Victor::Tie)
-        }
-        else
+            Some(Victor::Opp)
+        } else
         {
             None
         }

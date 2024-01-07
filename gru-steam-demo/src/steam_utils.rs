@@ -1,12 +1,19 @@
 use steamworks as steam;
 use std::sync::mpsc;
+use super::game;
+use serde::{Serialize, Deserialize};
 
-use crate::game::Symbol;
+#[derive(Serialize, Deserialize)]
+pub enum SteamMessage
+{
+    Pick(game::Symbol),
+    Abandon,
+}
 
 pub enum SteamEvent
 {
     JoinLobby(steam::LobbyId),
-    Pick(Symbol)
+    Pick(game::Symbol),
 }
 
 pub struct SteamInit
@@ -69,5 +76,31 @@ impl<T: 'static + Send> BlockOn<T>
     pub fn cb(self) -> impl FnOnce(T) + 'static + Send
     {
         move |res| self.0.send(res).unwrap()
+    }
+}
+
+pub trait Serde: Sized
+{
+	fn to_bytes(&self, buf: &mut Vec<u8>);
+	fn from_bytes(data: &[u8]) -> Option<Self>;
+}
+
+impl<T: Serialize + for<'de> Deserialize<'de>> Serde for T
+{
+	fn to_bytes(&self, buf: &mut Vec<u8>) { buf.clear(); bincode::serialize_into(buf, self).unwrap() }
+	fn from_bytes(data: &[u8]) -> Option<Self> { result_to_option(bincode::deserialize_from(data)) }
+}
+
+#[inline(always)]
+fn result_to_option<T, E: std::fmt::Debug>(result: Result<T, E>) -> Option<T>
+{
+    match result
+    {
+        Ok(ok) => Some(ok),
+        Err(err) =>
+        {
+            println!("Serde: {:?}", err);
+            None
+        }
     }
 }

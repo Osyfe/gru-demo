@@ -1,4 +1,5 @@
 use super::{data::{State, Data}, ui::{Widget, widget::{WidgetExt, layout::*, primitive::*, compose::*, dynamic::*}}, game::Symbol};
+use std::borrow::Borrow;
 
 #[derive(Clone, Copy)]
 pub enum EventTag
@@ -6,7 +7,13 @@ pub enum EventTag
     CreateLobby,
     LeaveLobby,
     StartMatch,
-    Pick(Symbol)
+    Pick(Symbol),
+    EndApp,
+}
+
+fn button<T, L: Borrow<str>>(label: L, tag: EventTag) -> impl Widget<T, EventTag>
+{
+    Label::new().own(label).pad().horizontal(0.5).align().bg().response().event(tag)
 }
 
 pub fn build() -> impl Widget<Data, EventTag>
@@ -16,8 +23,8 @@ pub fn build() -> impl Widget<Data, EventTag>
     let menu = Flex::column()
         .with(Label::new().size(2.0).own("Menu").align().center_h())
         .with(Empty.fix().height(1.0))
-        .with(Label::new().own("Create Lobby").pad().horizontal(0.5).align().bg().response().event(CreateLobby))
-        .with(Label::new().own("Exit").pad().horizontal(0.5).align().bg().response().action(|_, data: &mut Data| data.state = State::End))
+        .with(button("Create Lobby", CreateLobby))
+        .with(button("Exit", EndApp))
         .padding(0.5)
         .align()
         .pad().horizontal(1.0).vertical(1.0);
@@ -33,26 +40,31 @@ pub fn build() -> impl Widget<Data, EventTag>
             {
                 for member in &data.members
                 {
-                    list.add(Label::new().own(member.to_owned()).pad().horizontal(0.5));
+                    list.add(Label::new().own(member.1.to_owned()).pad().horizontal(0.5));
                 }
             }
             list
         }))
         .with(Empty.fix().height(1.0))
-        .with(Label::new().own("Start Match").pad().horizontal(0.5).align().bg().response().event(StartMatch))
-        .with(Label::new().own("Leave Lobby").pad().horizontal(0.5).align().bg().response().event(LeaveLobby))
+        .with(button("Start Match", StartMatch))
+        .with(button("Leave Lobby", LeaveLobby))
         .padding(0.5)
         .align()
         .pad().horizontal(1.0).vertical(1.0);
 
-    let game = Set::new().
-        with(Label::new().own("In Game"));
+    let game = Flex::column()
+        .with(Label::new().size(2.0).own("In Game").align().center_h())
+        .with(Empty.fix().height(1.0))
+        .with(button("Abandon", LeaveLobby))
+        .padding(0.5)
+        .align()
+        .pad().horizontal(1.0).vertical(1.0);
         //turn count //score //pick options
 
     let set = Set::new()
         .with(menu.maybe(|data: &mut Data| matches!(data.state, State::Menu)))
         .with(lobby.maybe(|data: &mut Data| matches!(data.state, State::Lobby(_))))
-        .with(game.maybe(|data: &mut Data| matches!(data.state, State::Match(_))));
+        .with(game.maybe(|data: &mut Data| matches!(data.state, State::Match(_, _))));
 
     Flex::column()
         .with(Label::new().size(3.0).own("Rock Paper Scissors").align().center_h())

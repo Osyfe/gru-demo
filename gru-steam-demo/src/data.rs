@@ -1,12 +1,11 @@
 use super::*;
 use ui_utils::EventTag;
-use game::Game as Match;
 
 pub enum State
 {
     Menu,
     Lobby(lobby::LobbyData),
-    Match(Match),
+    Match(net::Networking, game::Match),
     End,
 }
 
@@ -62,24 +61,26 @@ impl Data
                     {
                         if lobby.members.len() == 2
                         {
-                            todo!();
+                            let networking = net::Networking::new(&self.steam.client, lobby.members[0].0, lobby.members[1].0);
+                            let game = game::Match::new(3, lobby.members[0].1.clone(), lobby.members[1].1.clone());
+                            self.state = State::Match(networking, game);
                         } else 
                         { 
                             println!("You need 2 players to play!");
-                            self.state = State::Match(Match::new(3, "You".to_string(), "Opponent".to_string()))
                         }
                     } else { unreachable!("Start Match while not in Lobby State!"); }
                 }
                 EventTag::Pick(symbol) => 
                 {
-                    if let State::Match(Match{ current_round, .. }) = &mut self.state
+                    if let State::Match(networking, game::Match { current_round, .. }) = &mut self.state
                     {
                         if current_round.your_turn(*symbol)
                         {
-                            todo!("Picked Symbol and round finished");
+                            todo!("Picked Symbol and round finished!");
                         }
                     } else { unreachable!("Pick Symbol while not in Match State!"); }
-                }
+                },
+                EventTag::EndApp => self.state = State::End,
             },
             _ => {},
         }
@@ -104,7 +105,7 @@ impl Data
                 }
                 Event::Pick(symbol) => 
                 {
-                    if let State::Match(Match{ current_round, .. }) = &mut self.state
+                    if let State::Match(networking, game::Match { current_round, .. }) = &mut self.state
                     {
                         if current_round.opp_turn(symbol)
                         {
