@@ -1,5 +1,3 @@
-use crate::game::Symbol;
-
 use super::*;
 use ui_utils::EventTag;
 use game::Game as Match;
@@ -78,7 +76,7 @@ impl Data
                     {
                         if current_round.your_turn(*symbol)
                         {
-                            todo!("Picked Symbol");
+                            todo!("Picked Symbol and round finished");
                         }
                     } else { unreachable!(); }
                 }
@@ -107,7 +105,7 @@ impl Data
                     {
                         if current_round.opp_turn(symbol)
                         {
-                            todo!("Recieved Symbol");
+                            todo!("Recieved Symbol and round finished");
                         }
                     } else { unreachable!(); }
                 },

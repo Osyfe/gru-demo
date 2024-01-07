@@ -18,7 +18,7 @@ pub struct Game {
     pub scores: (u32, u32),
 }
 
-enum Victor {
+pub enum Victor {
     You,
     Opp,
     Tie,
@@ -84,31 +84,33 @@ impl Game {
                 Victor::Tie => {},
             }
 
-            let posible_points = self.max_round - self.current_round.index;
-            let max_scores = (self.scores.0 + posible_points, self.scores.1 + posible_points);
-
-            if max_scores.0 < self.scores.1
-            {
-                Some(Victor::Opp)
-            } 
-            else if max_scores.1 < self.scores.0
-            {
-                Some(Victor::You)
-            }
-            else if posible_points == 0
-            {
-                Some(Victor::Tie)
-            }
-            else
-            {
-                self.current_round = Round::new(self.current_round.index + 1);
-                None
-            }
+            self.victor().or_else(|| {self.current_round = Round::new(self.current_round.index + 1); None})
         } else
         {
             None
         }
     }
 
-    
+    pub fn victor(&self) -> Option<Victor>
+    {
+        let posible_points = self.max_round - self.current_round.index;
+        let max_scores = (self.scores.0 + posible_points, self.scores.1 + posible_points);
+
+        if max_scores.0 < self.scores.1
+        {
+            Some(Victor::Opp)
+        } 
+        else if max_scores.1 < self.scores.0
+        {
+            Some(Victor::You)
+        }
+        else if posible_points == 0
+        {
+            Some(Victor::Tie)
+        }
+        else
+        {
+            None
+        }
+    }
 }
