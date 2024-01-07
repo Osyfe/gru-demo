@@ -53,7 +53,7 @@ impl Data
                 EventTag::LeaveLobby =>
                 {
                     if let State::Lobby(lobby) = &mut self.state { lobby.leave(); }
-                    else { unreachable!(); }
+                    else { unreachable!("Leave Lobby while not in Lobby State!"); }
                     self.state = State::Menu;
                 },
                 EventTag::StartMatch =>
@@ -68,7 +68,7 @@ impl Data
                             println!("You need 2 players to play!");
                             self.state = State::Match(Match::new(3, "You".to_string(), "Opponent".to_string()))
                         }
-                    } else { unreachable!(); }
+                    } else { unreachable!("Start Match while not in Lobby State!"); }
                 }
                 EventTag::Pick(symbol) => 
                 {
@@ -78,7 +78,7 @@ impl Data
                         {
                             todo!("Picked Symbol and round finished");
                         }
-                    } else { unreachable!(); }
+                    } else { unreachable!("Pick Symbol while not in Match State!"); }
                 }
             },
             _ => {},
@@ -97,6 +97,9 @@ impl Data
                     if let Some(lobby) = lobby::LobbyData::join(&self.steam.client, Some(id))
                     {
                         self.state = State::Lobby(lobby);
+                    } else
+                    {
+                        println!("Faild to join Lobby {id:?}");
                     }
                 }
                 Event::Pick(symbol) => 
@@ -107,7 +110,7 @@ impl Data
                         {
                             todo!("Recieved Symbol and round finished");
                         }
-                    } else { unreachable!(); }
+                    } else { unreachable!("Recieved Symbol while not in Match State"); }
                 },
             }
         }

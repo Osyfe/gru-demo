@@ -17,7 +17,7 @@ pub struct SteamInit
 
 pub fn run<F: FnOnce(SteamInit)>(f: F)
 {
-    let (client, single) = steam::Client::init().unwrap();
+    let (client, single) = steam::Client::init().expect("Probably Steam not running!");
     client.utils().set_overlay_notification_position(steam::NotificationPosition::BottomRight);
 
     let (send, recv) = mpsc::sync_channel(1);
