@@ -59,20 +59,32 @@ fn lobby() -> impl Widget<Data, EventTag>
 
 fn game() -> impl Widget<Data, EventTag>
 {
-    let your_score = Label::new().map(|score| format!("Your Score: {score}")).lens(LensTuple0);
-    let opp_score = Label::new().map(|score| format!("Opponent Score: {score}")).lens(LensTuple1);
-    Flex::column()
-        .with(Label::new().size(2.0).own("In Game").align().center_h())
-        .with(Empty.fix().height(1.0))
-        .with(Flex::row().with(your_score).with(opp_score).padding(0.5).lens(Match::scores))
+    let control = Flex::column()
         .with(Flex::row().with(button("Rock", Pick(Symbol::Rock))).with(button("Paper", Pick(Symbol::Paper))).with(button("Scissor", Pick(Symbol::Scissor))).padding(0.5))
         .with(Empty.fix().height(1.0))
         .with(button("Abandon", Abandon).align())
         .padding(0.5)
         .align()
-        .pad().horizontal(1.0).vertical(1.0)
+        .pad().horizontal(1.0).vertical(1.0);
+
+    let your_name = Label::new().lens(LensTuple0);
+    let opp_name = Label::new().lens(LensTuple1);
+    let names = Flex::row().with(your_name).with(Label::new().own(" vs ")).with(opp_name).lens(Match::players);
+    let your_score = Label::new().map(|score| format!("{score}")).lens(LensTuple0);
+    let opp_score = Label::new().map(|score| format!("{score}")).lens(LensTuple1);
+    let scores = Flex::row().with(your_score).with(Label::new().own(" vs ")).with(opp_score).padding(0.5).lens(Match::scores);
+    let info = Flex::column()
+        .with(names)
+        .with(scores)
+        .padding(0.5)
+        .align()
+        .pad().horizontal(1.0).vertical(1.0);
+
+    Flex::column()
+        .with(Label::new().size(2.0).own("In Game").align().center_h())
+        .with(Empty.fix().height(1.0))
+        .with(Flex::row().with(control).with(info).padding(1.0))
         .lens(Data::state.chain(MatchLens))
-        //turn count
 }
 
 pub fn build() -> impl Widget<Data, EventTag>
