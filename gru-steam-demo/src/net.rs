@@ -57,7 +57,7 @@ impl LobbyNetworking
 pub struct Networking
 {
     net: net::NetworkingMessages<Manager>,
-    your_id: steam::SteamId,
+    _your_id: steam::SteamId,
     opp_id: steam::SteamId,
 }
 
@@ -66,7 +66,7 @@ impl Networking
     pub fn new(net: &mut LobbyNetworking, your_id: steam::SteamId, opp_id: steam::SteamId) -> Self
     {
         let net = net.net.take().expect("Starting Match more than once");
-        Self { net, your_id, opp_id }
+        Self { net, _your_id: your_id, opp_id }
     }
 
     pub fn send(&self, msg: steam_utils::SteamMessage) { send(&self.net, self.opp_id, msg); }
@@ -83,7 +83,7 @@ impl Drop for Networking
 
 fn send(net: &net::NetworkingMessages<Manager>, id: steam::SteamId, msg: steam_utils::SteamMessage)
 {
-    println!("sending: {msg:?}");
+    //println!("sending: {msg:?}");
     let mut buf = Vec::with_capacity(std::mem::size_of::<steam_utils::SteamMessage>());
     msg.to_bytes(&mut buf);
     net.send_message_to_user(net_types::NetworkingIdentity::new_steam_id(id), net_types::SendFlags::RELIABLE, &buf, CHANNEL).unwrap();
@@ -93,6 +93,6 @@ fn recv(net: &net::NetworkingMessages<Manager>) -> Option<steam_utils::SteamMess
 {
     let msgs = net.receive_messages_on_channel(CHANNEL, 1);
     let msg = if msgs.len() > 0 { steam_utils::SteamMessage::from_bytes(msgs[0].data()) } else { None };
-    if let Some(msg) = &msg { println!("received: {msg:?}"); }
+    //if let Some(msg) = &msg { println!("received: {msg:?}"); }
     msg
 }

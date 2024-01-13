@@ -61,7 +61,7 @@ fn game() -> impl Widget<Data, EventTag>
 {
     let your_name = Label::new().size(2.0).lens(LensTuple0);
     let opp_name = Label::new().size(2.0).lens(LensTuple1);
-    let names = Flex::row().with(your_name).with(Label::new().own(" vs ")).with(opp_name).lens(Match::players);
+    let names = Flex::row().with(your_name).with(Label::new().own("   vs   ").align().center()).with(opp_name).lens(Match::players);
     let your_score = Label::new().map(|score| format!("{score}")).lens(LensTuple0);
     let opp_score = Label::new().map(|score| format!("{score}")).lens(LensTuple1);
     let scores = Flex::row().with(your_score).with(Label::new().own(" vs ")).with(opp_score).padding(0.5).lens(Match::scores);
@@ -74,9 +74,24 @@ fn game() -> impl Widget<Data, EventTag>
         .with(button("Paper", Pick(Symbol::Paper)))
         .with(button("Scissor", Pick(Symbol::Scissor)))
         .padding(0.5);
-    let your_pick = Label::new().map(|symbol: &Option<Symbol>| if let Some(symbol) = symbol { format!("{symbol:?}") } else { String::new() });
-    let your_display = And::new(your_choice.maybe(|s: &mut Option<Symbol>| s.is_none()), your_pick.maybe(|s: &mut Option<Symbol>| s.is_some())).lens(Match::current_round.chain(Round::your_symbol));
-    let opp_display = Label::new().map(|symbol: &Option<Symbol>| if symbol.is_some() { format!("Opp Done") } else { String::new() }).lens(Match::current_round.chain(Round::opp_symbol));
+    let your_pick = Label::new()
+        .map(|symbol: &Option<Symbol>| if let Some(symbol) = symbol { format!("{symbol:?}") } else { String::new() })
+        .bg()
+        .fix().width(10.0);
+    let your_display = And::new
+    (
+        your_choice.maybe(|s: &mut Option<Symbol>| s.is_none()),
+        your_pick.maybe(|s: &mut Option<Symbol>| s.is_some())
+    )
+        .lens(Match::current_round.chain(Round::your_symbol))
+        .align().center_h();
+    let opp_display = Label::new()
+        .map(|symbol: &Option<Symbol>| if symbol.is_some() { format!("Opp Done") } else { String::new() })
+        .bg()
+        //.fix().width(10.0)
+        .align().center_h()
+        .maybe(|s: &mut Option<Symbol>| s.is_some())
+        .lens(Match::current_round.chain(Round::opp_symbol));
 
     Flex::column()
         .with(title)
@@ -86,7 +101,7 @@ fn game() -> impl Widget<Data, EventTag>
         .with(Empty.fix().height(1.0))
         .with(button("Abandon", Abandon).align())
         .padding(0.5)
-        .align()
+        .align().center()
         .pad().horizontal(1.0).vertical(1.0)
         .lens(Data::state.chain(MatchLens))
 }
