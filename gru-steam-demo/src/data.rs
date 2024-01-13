@@ -1,5 +1,6 @@
 use super::*;
 use ui_utils::EventTag;
+use gru_ui::lens::Lens;
 
 pub enum State
 {
@@ -9,6 +10,7 @@ pub enum State
     End,
 }
 
+#[derive(Lens)]
 pub struct Data
 {
     pub state: State,
@@ -26,7 +28,7 @@ impl Data
         }
     }
 
-    pub fn ui_event(&mut self, ctx: &mut Context, event: &mut event::Event<EventTag>)
+    pub fn ui_event(&mut self, ctx: &mut Context, request: &mut ui::Request, event: &mut event::Event<EventTag>)
     {
         match event
         {
@@ -77,6 +79,7 @@ impl Data
                         networking.send(steam_utils::SteamMessage::Pick(*symbol));
                         if game.current_round.your_turn(*symbol)
                         {
+                            request.layout();
                             if let Some(victor) = game.next_round()
                             {
                                 println!("Victor: {victor:?}");
@@ -98,7 +101,7 @@ impl Data
         }
     }
 
-    pub fn steam_events(&mut self)
+    pub fn steam_events(&mut self, request: &mut ui::Request)
     {
         use steam_utils::{SteamEvent as Event, SteamMessage as Message};
         for event in self.steam.events.try_iter()
@@ -143,6 +146,7 @@ impl Data
                             {
                                 if game.current_round.opp_turn(symbol)
                                 {
+                                    request.layout();
                                     if let Some(victor) = game.next_round()
                                     {
                                         println!("Victor: {victor:?}");

@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use gru_ui::lens::Lens;
 
 pub const TARGET_SCORE: u32 = 3;
 
@@ -10,12 +11,14 @@ pub enum Symbol
     Scissor,
 }
 
+#[derive(Default)]
 pub struct Round
 {
     pub your_symbol: Option<Symbol>,
     opp_symbol: Option<Symbol>,
 }
 
+#[derive(Default, Lens)]
 pub struct Match
 {
     pub players: (String, String),

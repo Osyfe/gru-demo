@@ -42,8 +42,8 @@ impl App for Game
         let size = Vec2(width as f32, height as f32);
 
         let ui::Frame { paint, events, request, .. } = self.ui.frame(ui::UiConfig { size, scale: 1.0, display_scale_factor: 1.0 }, &mut self.data, self.binding.events().into_iter());
-        for event in events { self.data.ui_event(ctx, event); }
-        self.data.steam_events();
+        for event in events { self.data.ui_event(ctx, request, event); }
+        self.data.steam_events(request);
         self.data.frame(request);
 
         let gl = ctx.gl();

@@ -1,6 +1,6 @@
 use steamworks::{self as steam, networking_messages as net, networking_types as net_types};
 use super::steam_utils::{self, Serde};
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 const CHANNEL: u32 = 72894;
 type Manager = steam::ClientManager;
@@ -16,7 +16,7 @@ impl LobbyNetworking
     pub fn frame(&mut self, members: &[(steam::SteamId, String)])
     {
         let now = Instant::now();
-        if (now - self.last_hi).as_millis() > 100
+        if now - self.last_hi > Duration::from_secs(1)
         {
             for (id, _) in &members[1..]
             {
@@ -48,7 +48,8 @@ impl LobbyNetworking
     pub fn new(client: &steam::Client) -> Self
     {
         let net = client.networking_messages();
-        let last_hi = Instant::now();
+        net.receive_messages_on_channel(CHANNEL, 1000);
+        let last_hi = Instant::now() - Duration::from_secs(10);
         Self { net: Some(net), last_hi }
     }
 }
