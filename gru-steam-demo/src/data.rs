@@ -113,6 +113,7 @@ impl Data
                         State::Menu => unreachable!("Received Message while in Menu"),
                         State::Lobby(net, lobby) => match msg
                         {
+                            Message::Hi => println!("got hi in lobby!"),
                             Message::Start(opp_id, opp_name) =>
                             {
                                 let your_id = lobby.members[0].0;
@@ -122,10 +123,11 @@ impl Data
                                 self.state = State::Match(networking, game);
                             },
                             Message::Pick(_) => unreachable!("Received Symbol while in Lobby"),
-                            Message::Abandon => unreachable!("Received bandon while in Lobby"),
+                            Message::Abandon => unreachable!("Received Abandon while in Lobby"),
                         },
                         State::Match(_, game) => match msg
                         {
+                            Message::Hi => println!("got hi in match!"),
                             Message::Start(_, _) => unreachable!("Received Start Match while in Match"),
                             Message::Pick(symbol) =>
                             {
@@ -156,6 +158,7 @@ impl Data
             {
                 self.steam.msgs_lobby(net);
                 data.frame(request);
+                net.frame(&data.members);
             },
             State::Match(networking, _) => self.steam.msgs_game(networking),
             _ => {},
