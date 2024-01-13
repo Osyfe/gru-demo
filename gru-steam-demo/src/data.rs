@@ -4,7 +4,7 @@ use ui_utils::EventTag;
 pub enum State
 {
     Menu,
-    Lobby(lobby::LobbyData),
+    Lobby(net::LobbyNetworking, lobby::LobbyData),
     Match(net::Networking, game::Match),
     End,
 }
@@ -46,7 +46,8 @@ impl Data
                 {
                     if let Some(lobby) = lobby::LobbyData::join(&self.steam.client, None)
                     {
-                        self.state = State::Lobby(lobby);
+                        let net = net::LobbyNetworking::new(&self.steam.client);
+                        self.state = State::Lobby(net, lobby);
                     }
                 },
                 EventTag::LeaveLobby =>
@@ -55,11 +56,11 @@ impl Data
                 },
                 EventTag::StartMatch =>
                 {
-                    if let State::Lobby(lobby) = &mut self.state
+                    if let State::Lobby(net, lobby) = &mut self.state
                     {
                         if lobby.members.len() == 2
                         {
-                            let networking = net::Networking::new(&self.steam.client, lobby.members[0].0, lobby.members[1].0);
+                            let networking = net::Networking::new(net, lobby.members[0].0, lobby.members[1].0);
                             networking.send(steam_utils::SteamMessage::Start(lobby.members[0].0, lobby.members[0].1.clone()));
                             let game = game::Match::new(game::TARGET_SCORE, lobby.members[0].1.clone(), lobby.members[1].1.clone());
                             self.state = State::Match(networking, game);
@@ -98,7 +99,8 @@ impl Data
                 {
                     if let Some(lobby) = lobby::LobbyData::join(&self.steam.client, Some(id))
                     {
-                        self.state = State::Lobby(lobby);
+                        let net = net::LobbyNetworking::new(&self.steam.client);
+                        self.state = State::Lobby(net, lobby);
                     } else
                     {
                         println!("Faild to join Lobby {id:?}");
@@ -109,13 +111,13 @@ impl Data
                     match &mut self.state
                     {
                         State::Menu => unreachable!("Received Message while in Menu"),
-                        State::Lobby(lobby) => match msg
+                        State::Lobby(net, lobby) => match msg
                         {
                             Message::Start(opp_id, opp_name) =>
                             {
                                 let your_id = lobby.members[0].0;
                                 let your_name = lobby.members[0].1.clone();
-                                let networking = net::Networking::new(&self.steam.client, your_id, opp_id);
+                                let networking = net::Networking::new(net, your_id, opp_id);
                                 let game = game::Match::new(game::TARGET_SCORE, your_name, opp_name);
                                 self.state = State::Match(networking, game);
                             },
@@ -150,8 +152,12 @@ impl Data
     {
         match &mut self.state
         {
-            State::Lobby(data) => data.frame(request),
-            State::Match(networking, _) => self.steam.msgs(networking),
+            State::Lobby(net, data) =>
+            {
+                self.steam.msgs_lobby(net);
+                data.frame(request);
+            },
+            State::Match(networking, _) => self.steam.msgs_game(networking),
             _ => {},
         }
     }

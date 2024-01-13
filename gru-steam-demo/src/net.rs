@@ -4,6 +4,31 @@ use super::steam_utils::{self, Serde};
 const CHANNEL: u32 = 72894;
 type Manager = steam::ClientManager;
 
+pub struct LobbyNetworking(Option<net::NetworkingMessages<Manager>>);
+
+impl LobbyNetworking
+{
+    pub fn recv(&self) -> Option<steam_utils::SteamMessage>
+    {
+        if let Some(net) = &self.0
+        {
+            let msgs = net.receive_messages_on_channel(CHANNEL, 1);
+            let msg = if msgs.len() > 0 { steam_utils::SteamMessage::from_bytes(msgs[0].data()) } else { None };
+            if let Some(msg) = &msg { println!("received in lobby: {msg:?}"); }
+            msg
+        } else { None }
+    }
+}
+
+impl LobbyNetworking
+{
+    pub fn new(client: &steam::Client) -> Self
+    {
+        let net = client.networking_messages();
+        Self(Some(net))
+    }
+}
+
 pub struct Networking
 {
     net: net::NetworkingMessages<Manager>,
@@ -13,9 +38,9 @@ pub struct Networking
 
 impl Networking
 {
-    pub fn new(client: &steam::Client, your_id: steam::SteamId, opp_id: steam::SteamId) -> Self
+    pub fn new(net: &mut LobbyNetworking, your_id: steam::SteamId, opp_id: steam::SteamId) -> Self
     {
-        let net = client.networking_messages();
+        let net = net.0.take().expect("Starting Match more than once");
         Self { net, your_id, opp_id }
     }
 

@@ -41,7 +41,15 @@ pub fn run<F: FnOnce(SteamInit)>(f: F)
 
 impl SteamInit
 {
-    pub fn msgs(&mut self, net: &net::Networking)
+    pub fn msgs_lobby(&mut self, net: &net::LobbyNetworking)
+    {
+        if let Some(msg) = net.recv()
+        {
+            self.send.send(SteamEvent::Msg(msg)).unwrap();
+        }
+    }
+
+    pub fn msgs_game(&mut self, net: &net::Networking)
     {
         if let Some(msg) = net.recv()
         {

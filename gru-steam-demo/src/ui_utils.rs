@@ -36,7 +36,7 @@ pub fn build() -> impl Widget<Data, EventTag>
         {
             let mut list = Flex::column();
             list.add(Label::new().own("Players:"));
-            if let State::Lobby(data) = &data.state
+            if let State::Lobby(_, data) = &data.state
             {
                 for member in &data.members
                 {
@@ -65,7 +65,7 @@ pub fn build() -> impl Widget<Data, EventTag>
 
     let set = Set::new()
         .with(menu.maybe(|data: &mut Data| matches!(data.state, State::Menu)))
-        .with(lobby.maybe(|data: &mut Data| matches!(data.state, State::Lobby(_))))
+        .with(lobby.maybe(|data: &mut Data| matches!(data.state, State::Lobby(_, _))))
         .with(game.maybe(|data: &mut Data| matches!(data.state, State::Match(_, _))));
 
     Flex::column()
