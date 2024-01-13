@@ -8,6 +8,7 @@ pub enum EventTag
     LeaveLobby,
     StartMatch,
     Pick(Symbol),
+    Abandon,
     EndApp,
 }
 
@@ -57,7 +58,7 @@ pub fn build() -> impl Widget<Data, EventTag>
         .with(Empty.fix().height(1.0))
         .with(Flex::row().with(button("Rock", Pick(Symbol::Rock))).with(button("Paper", Pick(Symbol::Paper))).with(button("Scissor", Pick(Symbol::Scissor))).padding(0.5))
         .with(Empty.fix().height(1.0))
-        .with(button("Abandon", LeaveLobby).align().center_h())
+        .with(button("Abandon", Abandon).align())
         .padding(0.5)
         .align()
         .pad().horizontal(1.0).vertical(1.0);

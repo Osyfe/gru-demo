@@ -77,10 +77,20 @@ impl Data
                         networking.send(steam_utils::SteamMessage::Pick(*symbol));
                         if game.current_round.your_turn(*symbol)
                         {
-                            
-                            println!("Picked Symbol and round finished!");
+                            if let Some(victor) = game.next_round()
+                            {
+                                println!("Victor: {victor:?}");
+                                self.state = State::Menu;
+                            }
                         }
                     } else { unreachable!("Pick Symbol while not in Match State!"); }
+                },
+                EventTag::Abandon =>
+                {
+                    if let State::Match(_, _) = &mut self.state
+                    {
+                        self.state = State::Menu;
+                    } else { unreachable!("Abandon while not in Match State!"); }
                 },
                 EventTag::EndApp => self.state = State::End,
             },
@@ -113,7 +123,7 @@ impl Data
                         State::Menu => unreachable!("Received Message while in Menu"),
                         State::Lobby(net, lobby) => match msg
                         {
-                            Message::Hi => println!("got hi in lobby!"),
+                            Message::Hi => {},
                             Message::Start(opp_id, opp_name) =>
                             {
                                 let your_id = lobby.members[0].0;
@@ -127,14 +137,17 @@ impl Data
                         },
                         State::Match(_, game) => match msg
                         {
-                            Message::Hi => println!("got hi in match!"),
+                            Message::Hi => {},
                             Message::Start(_, _) => unreachable!("Received Start Match while in Match"),
                             Message::Pick(symbol) =>
                             {
                                 if game.current_round.opp_turn(symbol)
                                 {
-        
-                                    println!("Received Symbol and round finished");
+                                    if let Some(victor) = game.next_round()
+                                    {
+                                        println!("Victor: {victor:?}");
+                                        self.state = State::Menu;
+                                    }
                                 }
                             },
                             Message::Abandon =>

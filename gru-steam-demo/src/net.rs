@@ -72,6 +72,14 @@ impl Networking
     pub fn recv(&self) -> Option<steam_utils::SteamMessage> { recv(&self.net) }
 }
 
+impl Drop for Networking
+{
+    fn drop(&mut self)
+    {
+        self.send(steam_utils::SteamMessage::Abandon);
+    }
+}
+
 fn send(net: &net::NetworkingMessages<Manager>, id: steam::SteamId, msg: steam_utils::SteamMessage)
 {
     println!("sending: {msg:?}");
