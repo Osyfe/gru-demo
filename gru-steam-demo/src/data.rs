@@ -72,11 +72,13 @@ impl Data
                 }
                 EventTag::Pick(symbol) => 
                 {
-                    if let State::Match(networking, game::Match { current_round, .. }) = &mut self.state
+                    if let State::Match(networking, game) = &mut self.state
                     {
-                        if current_round.your_turn(*symbol)
+                        networking.send(steam_utils::SteamMessage::Pick(*symbol));
+                        if game.current_round.your_turn(*symbol)
                         {
-                            todo!("Picked Symbol and round finished!");
+                            
+                            println!("Picked Symbol and round finished!");
                         }
                     } else { unreachable!("Pick Symbol while not in Match State!"); }
                 },
@@ -88,7 +90,7 @@ impl Data
 
     pub fn steam_events(&mut self)
     {
-        use steam_utils::SteamEvent as Event;
+        use steam_utils::{SteamEvent as Event, SteamMessage as Message};
         for event in self.steam.events.try_iter()
         {
             match event
@@ -102,14 +104,26 @@ impl Data
                     {
                         println!("Faild to join Lobby {id:?}");
                     }
-                }
-                Event::Pick(symbol) => 
+                },
+                Event::Msg(msg) =>
                 {
-                    if let State::Match(networking, game::Match { current_round, .. }) = &mut self.state
+                    if let State::Match(_, game) = &mut self.state
                     {
-                        if current_round.opp_turn(symbol)
+                        match msg
                         {
-                            todo!("Recieved Symbol and round finished");
+                            Message::Pick(symbol) =>
+                            {
+                                if game.current_round.opp_turn(symbol)
+                                {
+        
+                                    println!("Recieved Symbol and round finished");
+                                }
+                            },
+                            Message::Abandon =>
+                            {
+                                println!("{} gave up!", game.players.1);
+                                self.state = State::Menu;
+                            }
                         }
                     } else { unreachable!("Recieved Symbol while not in Match State"); }
                 },
@@ -122,6 +136,7 @@ impl Data
         match &mut self.state
         {
             State::Lobby(data) => data.frame(request),
+            State::Match(networking, _) => self.steam.msgs(networking),
             _ => {},
         }
     }

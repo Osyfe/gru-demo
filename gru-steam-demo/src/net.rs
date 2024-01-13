@@ -22,8 +22,8 @@ impl Networking
     pub fn send(&self, msg: steam_utils::SteamMessage)
     {
         let mut buf = Vec::with_capacity(std::mem::size_of::<steam_utils::SteamMessage>());
-        let bytes = msg.to_bytes(&mut buf);
-        self.net.send_message_to_user(net_types::NetworkingIdentity::new_steam_id(self.your_id), net_types::SendFlags::RELIABLE, &buf, CHANNEL).unwrap();
+        msg.to_bytes(&mut buf);
+        self.net.send_message_to_user(net_types::NetworkingIdentity::new_steam_id(self.opp_id), net_types::SendFlags::RELIABLE, &buf, CHANNEL).unwrap();
     }
 
     pub fn recv(&self) -> Option<steam_utils::SteamMessage>

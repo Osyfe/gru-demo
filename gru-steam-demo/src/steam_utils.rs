@@ -1,6 +1,6 @@
 use steamworks as steam;
 use std::sync::mpsc;
-use super::game;
+use super::{game, net};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -13,13 +13,14 @@ pub enum SteamMessage
 pub enum SteamEvent
 {
     JoinLobby(steam::LobbyId),
-    Pick(game::Symbol),
+    Msg(SteamMessage),
 }
 
 pub struct SteamInit
 {
     pub client: steam::Client,
     pub events: mpsc::Receiver<SteamEvent>,
+    send: mpsc::SyncSender<SteamEvent>,
 }
 
 pub fn run<F: FnOnce(SteamInit)>(f: F)
@@ -31,10 +32,21 @@ pub fn run<F: FnOnce(SteamInit)>(f: F)
     let send_lobby = send.clone();
     let _lobby = client.register_callback(move |event: steam::GameLobbyJoinRequested| send_lobby.send(SteamEvent::JoinLobby(event.lobby_steam_id)).unwrap());
     
-    let init = SteamInit { client, events: recv };
+    let init = SteamInit { client, events: recv, send };
     let driver = CBDriver::start(single);
     f(init);
     driver.stop();
+}
+
+impl SteamInit
+{
+    pub fn msgs(&mut self, net: &net::Networking)
+    {
+        if let Some(msg) = net.recv()
+        {
+            self.send.send(SteamEvent::Msg(msg)).unwrap();
+        }
+    }
 }
 
 struct CBDriver(mpsc::SyncSender<()>);
