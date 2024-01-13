@@ -1,4 +1,4 @@
-use super::{data::{State, Data}, game::{Match, Symbol}};
+use super::{data::{State, Data}, game::{Match, Round, Symbol}};
 use gru_ui::{Widget, widget::{WidgetExt, layout::*, primitive::*, compose::*, dynamic::*}, lens::{Lens, LensTuple0, LensTuple1, LensExt}};
 use std::borrow::Borrow;
 use EventTag::*;
@@ -59,31 +59,35 @@ fn lobby() -> impl Widget<Data, EventTag>
 
 fn game() -> impl Widget<Data, EventTag>
 {
-    let control = Flex::column()
-        .with(Flex::row().with(button("Rock", Pick(Symbol::Rock))).with(button("Paper", Pick(Symbol::Paper))).with(button("Scissor", Pick(Symbol::Scissor))).padding(0.5))
-        .with(Empty.fix().height(1.0))
-        .with(button("Abandon", Abandon).align())
-        .padding(0.5)
-        .align()
-        .pad().horizontal(1.0).vertical(1.0);
-
-    let your_name = Label::new().lens(LensTuple0);
-    let opp_name = Label::new().lens(LensTuple1);
+    let your_name = Label::new().size(2.0).lens(LensTuple0);
+    let opp_name = Label::new().size(2.0).lens(LensTuple1);
     let names = Flex::row().with(your_name).with(Label::new().own(" vs ")).with(opp_name).lens(Match::players);
     let your_score = Label::new().map(|score| format!("{score}")).lens(LensTuple0);
     let opp_score = Label::new().map(|score| format!("{score}")).lens(LensTuple1);
     let scores = Flex::row().with(your_score).with(Label::new().own(" vs ")).with(opp_score).padding(0.5).lens(Match::scores);
-    let info = Flex::column()
-        .with(names)
-        .with(scores)
-        .padding(0.5)
-        .align()
-        .pad().horizontal(1.0).vertical(1.0);
+    let title = Flex::column()
+        .with(names.align().center_h())
+        .with(scores.align().center_h());
+
+    let your_choice = Flex::row()
+        .with(button("Rock", Pick(Symbol::Rock)))
+        .with(button("Paper", Pick(Symbol::Paper)))
+        .with(button("Scissor", Pick(Symbol::Scissor)))
+        .padding(0.5);
+    let your_pick = Label::new().map(|symbol: &Option<Symbol>| if let Some(symbol) = symbol { format!("{symbol:?}") } else { String::new() });
+    let your_display = And::new(your_choice.maybe(|s: &mut Option<Symbol>| s.is_none()), your_pick.maybe(|s: &mut Option<Symbol>| s.is_some())).lens(Match::current_round.chain(Round::your_symbol));
+    let opp_display = Label::new().map(|symbol: &Option<Symbol>| if symbol.is_some() { format!("Opp Done") } else { String::new() }).lens(Match::current_round.chain(Round::opp_symbol));
 
     Flex::column()
-        .with(Label::new().size(2.0).own("In Game").align().center_h())
+        .with(title)
         .with(Empty.fix().height(1.0))
-        .with(Flex::row().with(control).with(info).padding(1.0))
+        .with(your_display)
+        .with(opp_display)
+        .with(Empty.fix().height(1.0))
+        .with(button("Abandon", Abandon).align())
+        .padding(0.5)
+        .align()
+        .pad().horizontal(1.0).vertical(1.0)
         .lens(Data::state.chain(MatchLens))
 }
 

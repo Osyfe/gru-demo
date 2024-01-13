@@ -76,10 +76,10 @@ impl Data
                 {
                     if let State::Match(networking, game) = &mut self.state
                     {
+                        request.layout();
                         networking.send(steam_utils::SteamMessage::Pick(*symbol));
                         if game.current_round.your_turn(*symbol)
                         {
-                            request.layout();
                             if let Some(victor) = game.next_round()
                             {
                                 println!("Victor: {victor:?}");
@@ -144,9 +144,9 @@ impl Data
                             Message::Start(_, _) => unreachable!("Received Start Match while in Match"),
                             Message::Pick(symbol) =>
                             {
+                                request.layout();
                                 if game.current_round.opp_turn(symbol)
                                 {
-                                    request.layout();
                                     if let Some(victor) = game.next_round()
                                     {
                                         println!("Victor: {victor:?}");

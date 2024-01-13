@@ -11,7 +11,7 @@ pub enum Symbol
     Scissor,
 }
 
-#[derive(Default)]
+#[derive(Default, Lens)]
 pub struct Round
 {
     pub your_symbol: Option<Symbol>,
