@@ -6,7 +6,7 @@ license = "MIT"
 edition = "2021"
 
 [dependencies]
-steamworks = { version = "0.10.0", features = ["raw-bindings"] }
+steamworks = { version = "0.10.0", features = ["raw-bindings", "serde"] }
 gru-opengl = { path = "../../gru-opengl", features = ["ui"] }
 gru-ui = { path = "../../gru-ui" }
 serde = { version = "1.0.195", features = ["derive", "std"] }

@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
 
+pub const TARGET_SCORE: u32 = 3;
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Symbol
 {

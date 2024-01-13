@@ -51,8 +51,6 @@ impl Data
                 },
                 EventTag::LeaveLobby =>
                 {
-                    if let State::Lobby(lobby) = &mut self.state { lobby.leave(); }
-                    else { unreachable!("Leave Lobby while not in Lobby State!"); }
                     self.state = State::Menu;
                 },
                 EventTag::StartMatch =>
@@ -62,7 +60,8 @@ impl Data
                         if lobby.members.len() == 2
                         {
                             let networking = net::Networking::new(&self.steam.client, lobby.members[0].0, lobby.members[1].0);
-                            let game = game::Match::new(3, lobby.members[0].1.clone(), lobby.members[1].1.clone());
+                            networking.send(steam_utils::SteamMessage::Start(lobby.members[0].0, lobby.members[0].1.clone()));
+                            let game = game::Match::new(game::TARGET_SCORE, lobby.members[0].1.clone(), lobby.members[1].1.clone());
                             self.state = State::Match(networking, game);
                         } else 
                         { 
@@ -107,16 +106,31 @@ impl Data
                 },
                 Event::Msg(msg) =>
                 {
-                    if let State::Match(_, game) = &mut self.state
+                    match &mut self.state
                     {
-                        match msg
+                        State::Menu => unreachable!("Received Message while in Menu"),
+                        State::Lobby(lobby) => match msg
                         {
+                            Message::Start(opp_id, opp_name) =>
+                            {
+                                let your_id = lobby.members[0].0;
+                                let your_name = lobby.members[0].1.clone();
+                                let networking = net::Networking::new(&self.steam.client, your_id, opp_id);
+                                let game = game::Match::new(game::TARGET_SCORE, your_name, opp_name);
+                                self.state = State::Match(networking, game);
+                            },
+                            Message::Pick(_) => unreachable!("Received Symbol while in Lobby"),
+                            Message::Abandon => unreachable!("Received bandon while in Lobby"),
+                        },
+                        State::Match(_, game) => match msg
+                        {
+                            Message::Start(_, _) => unreachable!("Received Start Match while in Match"),
                             Message::Pick(symbol) =>
                             {
                                 if game.current_round.opp_turn(symbol)
                                 {
         
-                                    println!("Recieved Symbol and round finished");
+                                    println!("Received Symbol and round finished");
                                 }
                             },
                             Message::Abandon =>
@@ -124,8 +138,9 @@ impl Data
                                 println!("{} gave up!", game.players.1);
                                 self.state = State::Menu;
                             }
-                        }
-                    } else { unreachable!("Recieved Symbol while not in Match State"); }
+                        },
+                        State::End => {},
+                    }
                 },
             }
         }

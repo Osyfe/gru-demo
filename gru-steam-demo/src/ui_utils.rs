@@ -55,13 +55,13 @@ pub fn build() -> impl Widget<Data, EventTag>
     let game = Flex::column()
         .with(Label::new().size(2.0).own("In Game").align().center_h())
         .with(Empty.fix().height(1.0))
-        .with(Flex::row().with(button("Rock", Pick(Symbol::Rock))).with(button("Paper", Pick(Symbol::Paper))).with(button("Scissor", Pick(Symbol::Scissor))))
+        .with(Flex::row().with(button("Rock", Pick(Symbol::Rock))).with(button("Paper", Pick(Symbol::Paper))).with(button("Scissor", Pick(Symbol::Scissor))).padding(0.5))
         .with(Empty.fix().height(1.0))
-        .with(button("Abandon", LeaveLobby))
+        .with(button("Abandon", LeaveLobby).align().center_h())
         .padding(0.5)
         .align()
         .pad().horizontal(1.0).vertical(1.0);
-        //turn count //score //pick options
+        //turn count //score
 
     let set = Set::new()
         .with(menu.maybe(|data: &mut Data| matches!(data.state, State::Menu)))

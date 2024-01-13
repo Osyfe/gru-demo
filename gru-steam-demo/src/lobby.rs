@@ -27,11 +27,6 @@ impl LobbyData
         }.ok().map(|lobby| Self { your_id, matchmaking, friends, lobby, members: Vec::new() })
     }
 
-    pub fn leave(&mut self)
-    {
-        self.matchmaking.leave_lobby(self.lobby)
-    }
-
     pub fn frame(&mut self, request: &mut gru_ui::Request)
     {
         if !self.verify_member_list()
@@ -57,5 +52,13 @@ impl LobbyData
             if member == self.your_id { self.members.insert(0, (member, name)); }
             else { self.members.push((member, name)); }
         }
+    }
+}
+
+impl Drop for LobbyData
+{
+    fn drop(&mut self)
+    {
+        self.matchmaking.leave_lobby(self.lobby);
     }
 }

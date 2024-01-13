@@ -6,6 +6,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize)]
 pub enum SteamMessage
 {
+    Start(steam::SteamId, String),
     Pick(game::Symbol),
     Abandon,
 }
