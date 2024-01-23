@@ -76,8 +76,8 @@ fn game() -> impl Widget<Data, EventTag>
         .padding(0.5);
     let your_pick = Label::new()
         .map(|symbol: &Option<Symbol>| if let Some(symbol) = symbol { format!("{symbol:?}") } else { String::new() })
-        .bg()
-        .fix().width(10.0);
+        .fix().width(5.0)
+        .bg();
     let your_display = And::new
     (
         your_choice.maybe(|s: &mut Option<Symbol>| s.is_none()),
@@ -87,8 +87,8 @@ fn game() -> impl Widget<Data, EventTag>
         .align().center_h();
     let opp_display = Label::new()
         .map(|symbol: &Option<Symbol>| if symbol.is_some() { format!("Opp Done") } else { String::new() })
+        .fix().width(5.0)
         .bg()
-        //.fix().width(10.0)
         .align().center_h()
         .maybe(|s: &mut Option<Symbol>| s.is_some())
         .lens(Match::current_round.chain(Round::opp_symbol));
@@ -113,7 +113,7 @@ pub fn build() -> impl Widget<Data, EventTag>
         .with(lobby().maybe(|data: &mut Data| matches!(data.state, State::Lobby(_, _))))
         .with(game().maybe(|data: &mut Data| matches!(data.state, State::Match(_, _))));
 
-    Flex::column()
+     Flex::column()
         .with(Label::new().size(3.0).own("Rock Paper Scissors").align().center_h())
         .with(Empty.fix().height(2.0))
         .with(set)

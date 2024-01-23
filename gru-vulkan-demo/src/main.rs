@@ -109,7 +109,7 @@ fn main()
     {
         let img = image::io::Reader::open("data/rocks.png").unwrap().decode().unwrap().to_bgra8();
         let (tex_width, tex_height) = img.dimensions();
-        let image_type = ImageType { channel: ImageChannelType::BgraSrgb, width: tex_width, height: tex_height, layers: None };
+        let image_type = ImageType { channel: ImageChannelType::BgraSrgb, width: tex_width, height: tex_height, layers: ImageLayers::Single };
         let mut stage_buffer = device.new_image_buffer(image_type);
         stage_buffer.write(&img);
         let texture = device.new_image(image_type, ImageUsage::Texture { mipmapping: true });
@@ -127,7 +127,7 @@ fn main()
     let font = Font::new(include_bytes!("../res/LatiniaBlack.ttf"));
     let chars = Font::digits();
     let (atlas_data, atlas) = Atlas::new(font, 300.0, chars, ATLAS_SIZE, 3);
-    let atlas_image_type = ImageType { channel: ImageChannelType::RUnorm, width: ATLAS_SIZE, height: ATLAS_SIZE, layers: Some(atlas_data.len() as u32) };
+    let atlas_image_type = ImageType { channel: ImageChannelType::RUnorm, width: ATLAS_SIZE, height: ATLAS_SIZE, layers: ImageLayers::Array(atlas_data.len() as u32) };
     let atlas_image = device.new_image(atlas_image_type, ImageUsage::Texture { mipmapping: false });
     {
         let mut buffer = device.new_image_buffer(atlas_image_type);
@@ -221,8 +221,8 @@ fn main()
 //main graphic stuff
     let msaa = Msaa::X4;
     //image buffers
-    let color_buffer = device.new_image(ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: None }, ImageUsage::Attachment { depth: false, samples: msaa, texture: false, transfer_src: false });
-    let depth_buffer = device.new_image(ImageType { channel: ImageChannelType::DSfloat, width, height, layers: None }, ImageUsage::Attachment { depth: true, samples: msaa, texture: false, transfer_src: false });
+    let color_buffer = device.new_image(ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: ImageLayers::Single }, ImageUsage::Attachment { depth: false, samples: msaa, texture: false, transfer_src: false });
+    let depth_buffer = device.new_image(ImageType { channel: ImageChannelType::DSfloat, width, height, layers: ImageLayers::Single }, ImageUsage::Attachment { depth: true, samples: msaa, texture: false, transfer_src: false });
     //renderpass & pipeline creation
     let render_pass = device.new_render_pass
     (
@@ -532,7 +532,7 @@ fn main()
                     command_buffers.borrow().get(&image_index).submit(&graphic_queue, Some(&image_available), Some(&rendering_finished), &may_begin_drawing);
                     if shot
                     {
-                        let image_type = ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: None };
+                        let image_type = ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: ImageLayers::Single };
                         let buffer = device.new_image_buffer(image_type);
                         let fence = command_pool.new_command_buffer().copy_from_image(&graphic_queue, CopyImageSource::Swapchain(swapchain.get_image(&image_index)), &buffer, device.new_fence(false));
                         shot_command_buffer = Some(fence.command_buffer);
