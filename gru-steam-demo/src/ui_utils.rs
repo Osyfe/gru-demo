@@ -76,7 +76,8 @@ fn game() -> impl Widget<Data, EventTag>
         .padding(0.5);
     let your_pick = Label::new()
         .map(|symbol: &Option<Symbol>| if let Some(symbol) = symbol { format!("{symbol:?}") } else { String::new() })
-        .fix().width(5.0)
+        .align().center_h()
+        .fix().width(7.0)
         .bg();
     let your_display = And::new
     (
@@ -87,7 +88,8 @@ fn game() -> impl Widget<Data, EventTag>
         .align().center_h();
     let opp_display = Label::new()
         .map(|symbol: &Option<Symbol>| if symbol.is_some() { format!("Opp Done") } else { String::new() })
-        .fix().width(5.0)
+        .align().center_h()
+        .fix().width(7.0)
         .bg()
         .align().center_h()
         .maybe(|s: &mut Option<Symbol>| s.is_some())
