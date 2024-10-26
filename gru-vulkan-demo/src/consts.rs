@@ -65,7 +65,7 @@ pub const FLASH_RADIUS_SQ: f32 = FLASH_RADIUS * FLASH_RADIUS;
 pub const FLASH_HEIGHT: f32 = 0.3;
 pub const FLASH_BLOCK_PROB: f32 = 0.2;
 pub const FLASH_EPS: f32 = 0.05;
-pub const FLASH_RESOLUTION: u32 = 100;
+pub const FLASH_RESOLUTION: u32 = 10;
 pub const PICKUP_RANGE: f32 = 3.0;
 
 pub const SCORE_DIGITS: usize = 3; //needs to be changed in main.rs under "compute score"

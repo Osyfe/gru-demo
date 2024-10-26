@@ -8,7 +8,8 @@ use gru_vulkan::*;
 use gru_misc::{math::*, text_sdf::*, time::*};
 use winit::{*, event_loop::ControlFlow, event::{VirtualKeyCode, ElementState}};
 use noise::{self, Seedable, NoiseFn};
-use std::{sync::{mpsc, Arc, Mutex}, collections::{HashSet, HashMap, hash_map}};
+use std::{sync::{mpsc, Arc, Mutex}, collections::hash_map};
+use ahash::{AHashMap as HashMap, AHashSet as HashSet};
 
 const ATLAS_SIZE: u32 = 512;
 
@@ -89,6 +90,7 @@ fn main()
         .build(&event_loop)
         .unwrap();
     window.set_cursor_visible(false);
+    window.set_cursor_grab(window::CursorGrabMode::Confined).unwrap();
     //let monitor = window.available_monitors().nth(0).unwrap();
     //let mode = monitor.video_modes().nth(0).unwrap();
     //window.set_fullscreen(Some(window::Fullscreen::Exclusive(mode)));
@@ -191,7 +193,7 @@ fn main()
     let mut tex_descriptor = device.new_descriptor_sets(&[(&tex_descriptor_layout, 1)]).remove(0).remove(0);
     tex_descriptor.update_sampler(0, &[&texture], &sampler);
 //cave
-    let seed = (std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)).unwrap().as_nanos() as u32;
+    let seed = 0; //(std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)).unwrap().as_nanos() as u32;
     let mold_gen = ||
     {
         let mut billow = noise::Billow::new().set_seed(seed);

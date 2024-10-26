@@ -3,7 +3,7 @@ use gru_opengl::{resource::load::{Model, TextureLoadConfig} , gl::{Shader, Textu
 impl_ResourceSystem!(CubeResources = 
     (model, Model<CubeVertex>, "cube", ()),
     (shader, Shader<CubeVertex>, "cube", ()),
-    (texture, Texture<false>, "cube", TextureLoadConfig { channel: TextureChannel::RGB, mipmap: true, wrap: TextureWrap::Repeat })
+    (texture, Texture<false>, "cube", TextureLoadConfig { channel: TextureChannel::RGB, mipmap: true, wrap_s: TextureWrap::Repeat, wrap_t: TextureWrap::Repeat })
 );
 
 use gru_opengl::gl::{AttributesReprCpacked, BufferType};
