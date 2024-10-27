@@ -1,6 +1,5 @@
-use crate::marching_cubes::Mold;
 use gru_misc::math::*;
-use crate::consts;
+use crate::{mold, consts};
 
 pub struct Camera
 {
@@ -66,7 +65,7 @@ impl Camera
         self.proj = Mat4::perspective_vulkan(aspect, consts::CAM_ANGLE, consts::CAM_NEAR, consts::CAM_FAR);
     }
 
-    pub fn get_acc(&mut self, dt: f32, mold: &impl Mold)
+    pub fn get_acc(&mut self, dt: f32, mold: &impl mold::Mold)
     {
         //acc
         if self.does_physics
@@ -107,7 +106,7 @@ impl Camera
         }
     }
 
-    pub fn logic(&mut self, dt: f32, mold: &impl Mold)
+    pub fn logic(&mut self, dt: f32, mold: &impl mold::Mold)
     {
         self.get_acc(dt, mold);
         if self.acc.norm() < consts::MIN_ACCELERATION

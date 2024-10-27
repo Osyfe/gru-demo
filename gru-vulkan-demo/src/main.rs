@@ -1,15 +1,16 @@
+mod mold;
 mod cave;
 mod camera;
-mod marching_cubes;
 mod consts;
 mod flash;
 
 use gru_vulkan::*;
-use gru_misc::{math::*, text_sdf::*, time::*};
+use gru_misc::{math::*, text_sdf::*, time::*, marching_cubes};
 use winit::{*, event_loop::ControlFlow, event::{VirtualKeyCode, ElementState}};
 use noise::{self, Seedable, NoiseFn};
 use std::{sync::{mpsc, Arc, Mutex}, collections::hash_map};
 use ahash::{AHashMap as HashMap, AHashSet as HashSet};
+use mold::Mold;
 
 const ATLAS_SIZE: u32 = 512;
 
@@ -155,14 +156,18 @@ fn main()
 //gerenerate and fill flash data
     let (mut dynamic_buffers, flash_vertex_view, flash_index_view, flash_instance_view) =
     {
-        let (vertices, indices) = marching_cubes::mesh_builder
-        (
-            Vec3(0.0, 0.0, 0.0),
-            Vec3(consts::FLASH_HEIGHT + consts::FLASH_EPS, consts::FLASH_RADIUS + consts::FLASH_EPS, consts::FLASH_RADIUS + consts::FLASH_EPS),
-            (consts::FLASH_RESOLUTION, consts::FLASH_RESOLUTION, consts::FLASH_RESOLUTION),
-            &flash::FlashMold()
-        );
-        let vertices: Vec<_> = vertices.iter().map(|vertex| flash::FlashVertex { pos: vertex.position.into() }).collect();
+        let config = marching_cubes::Config
+        {
+            offset: Vec3(0.0, 0.0, 0.0),
+            radii: Vec3(consts::FLASH_HEIGHT + consts::FLASH_EPS, consts::FLASH_RADIUS + consts::FLASH_EPS, consts::FLASH_RADIUS + consts::FLASH_EPS),
+            resolutions: (consts::FLASH_RESOLUTION, consts::FLASH_RESOLUTION, consts::FLASH_RESOLUTION)
+        };
+        let (vertices, indices) = marching_cubes::build(|v| flash::FlashMold.value(v), config);
+        let vertices: Vec<_> = vertices.into_iter().map(|vertex|
+        {
+            let vertex = flash::FlashMold.new_vertex(vertex);
+            flash::FlashVertex { pos: vertex.position.into() }
+        }).collect();
         let vertex_view = buffer_layout.add_attributes(vertices.len() as u32);
         let index_view = buffer_layout.add_indices(indices.len() as u32);
         let instance_view = buffer_layout.add_attributes((consts::BLOCK_SPAWN_FRONT_DISTANCE + consts::BLOCK_DESPAWN_BACK_DISTANCE) as u32 * 2);

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 gru-vulkan = { path = "../../gru-vulkan", features = ["linked", "math"] }
-gru-misc = { path = "../../gru-misc", features = ["math", "text_sdf", "time"] }
+gru-misc = { path = "../../gru-misc", features = ["math", "marching_cubes", "text_sdf", "time"] }
 winit = "0.28.6"
 noise = "0.7.0"
 image = { version = "0.23.14", default-features = false, features = ["png"] }

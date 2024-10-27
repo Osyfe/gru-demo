@@ -1,4 +1,3 @@
-use super::marching_cubes::Mold;
 use super::*;
 use crate::Vec3;
 use rand::distributions::{Distribution, Uniform};
@@ -21,9 +20,9 @@ pub struct FlashInstance
     pub color: F3
 }
 
-pub struct FlashMold();
+pub struct FlashMold;
 
-impl Mold for FlashMold
+impl mold::Mold for FlashMold
 {
     fn value(&self, pos: Vec3) -> f32
     {

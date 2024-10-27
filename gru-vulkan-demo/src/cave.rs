@@ -1,6 +1,6 @@
 use super::*;
 use super::Vertex;
-use super::marching_cubes::Mold;
+use gru_misc::marching_cubes;
 use rand::distributions::{Distribution, Uniform};
 
 pub struct CylinderBlock
@@ -14,16 +14,20 @@ pub struct CylinderBlock
 
 impl CylinderBlock
 {
-    pub fn new(device: &Device, command_pool: &CommandPool, queue: &Arc<Mutex<Queue>>, mold: &impl Mold, z: i32) -> Self
+    pub fn new(device: &Device, command_pool: &CommandPool, queue: &Arc<Mutex<Queue>>, mold: &impl mold::Mold, z: i32) -> Self
     {
-        let (vert, indices) = marching_cubes::mesh_builder
-        (
-            Vec3(0.0, 0.0, z as f32 * consts::BLOCK_LENGTH),
-            Vec3(consts::CAVE_RADIUS * 2.0, consts::CAVE_RADIUS * 2.0, consts::BLOCK_LENGTH / 2.0),
-            (consts::CAVE_RESOLUTION, consts::CAVE_RESOLUTION, (consts::CAVE_RESOLUTION as f32 / consts::CAVE_RADIUS * consts::BLOCK_LENGTH / 4.0) as u32),
-            mold
-        );
-        let vertices: Vec<_> = vert.iter().map(|v| Vertex { position: v.position.into(), normal: v.normal.into(), tex_coords: v.coords.into() }).collect();
+        let config = marching_cubes::Config
+        {
+            offset: Vec3(0.0, 0.0, z as f32 * consts::BLOCK_LENGTH),
+            radii: Vec3(consts::CAVE_RADIUS * 2.0, consts::CAVE_RADIUS * 2.0, consts::BLOCK_LENGTH / 2.0),
+            resolutions: (consts::CAVE_RESOLUTION, consts::CAVE_RESOLUTION, (consts::CAVE_RESOLUTION as f32 / consts::CAVE_RADIUS * consts::BLOCK_LENGTH / 4.0) as u32)
+        };
+        let (vert, indices) = marching_cubes::build(|pos| mold.value(pos), config);
+        let vertices: Vec<_> = vert.into_iter().map(|v|
+        {
+            let v = mold.new_vertex(v);
+            Vertex { position: v.position.into(), normal: v.normal.into(), tex_coords: v.coords.into() }
+        }).collect();
         let mut vertex_buffer_layout = device.new_buffer_type();
         let vertex_view = vertex_buffer_layout.add_attributes(vertices.len() as u32);
         let index_view = vertex_buffer_layout.add_indices(indices.len() as u32);
@@ -51,7 +55,7 @@ impl CylinderBlock
             {
                 pos.1 += 0.001;
             }
-            if mold.value(pos) < 0.0 { flashes.push((pos, flash::FlashMold().color(pos))); }
+            if mold.value(pos) < 0.0 { flashes.push((pos, flash::FlashMold.color(pos))); }
         };
         Self { buffer, vertex_view, index_view, z, flashes }
     }
@@ -65,7 +69,7 @@ pub struct BlockGenerator
 
 impl BlockGenerator
 {
-    pub fn new(device: &Device, queue_family_info: &QueueFamilyInfo, mold: impl Mold + std::marker::Send + 'static) -> Self
+    pub fn new(device: &Device, queue_family_info: &QueueFamilyInfo, mold: impl mold::Mold + std::marker::Send + 'static) -> Self
     {
         let (t_request, r_request) = std::sync::mpsc::channel();
         let (t_block, r_block) = std::sync::mpsc::channel();
@@ -117,7 +121,7 @@ impl<T: noise::NoiseFn<[f64; 3]>> Cave<T>
     pub fn y0(&self) -> f32 { self.y0 }
 }
 
-impl<T: noise::NoiseFn<[f64; 3]>> Mold for Cave<T>
+impl<T: noise::NoiseFn<[f64; 3]>> mold::Mold for Cave<T>
 {
     fn value(&self, Vec3(x, y, z): Vec3) -> f32
     {
