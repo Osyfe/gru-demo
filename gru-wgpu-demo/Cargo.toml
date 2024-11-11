@@ -1,0 +1,15 @@
+[package]
+name = "gru-wgpu-demo"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "desktop"
+path = "src/main.rs"
+
+[dependencies]
+log = { version = "0.4.20", features = ["max_level_info", "release_max_level_info"] }
+gru-wgpu = { path = "../../gru-wgpu" }
