@@ -24,7 +24,8 @@ pub struct Demo
     depth_buffer: Option<(wgpu::Texture, wgpu::TextureView)>,
     render: Render,
     cam: camera::Cam,
-    light: light::Light
+    light: light::Light,
+    ui: bool
 }
 
 impl App for Demo
@@ -43,7 +44,8 @@ impl App for Demo
         let render = Render::Loading(futures::State::from(warrior::Warrior::load(ctx.graphics.device.clone(), ctx.graphics.queue.clone())));
         let cam = camera::Cam::new();
         let light = light::Light::new();
-        Self { depth_buffer, render, cam, light }
+        let ui = false;
+        Self { depth_buffer, render, cam, light, ui }
     }
 
     fn frame(&mut self, ctx: &mut gru_wgpu::Context<Self>, dt: f32) -> bool

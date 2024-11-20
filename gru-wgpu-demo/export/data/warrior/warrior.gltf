@@ -508,104 +508,104 @@
     ],
     "images" : [
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "aermel_normal",
-            "uri" : "aermel_normal.jpg"
+            "uri" : "aermel_normal.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "stoff_oberteil",
-            "uri" : "stoff_oberteil.jpg"
+            "uri" : "stoff_oberteil.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schuhe+scheide_normal",
-            "uri" : "schuhescheide_normal.jpg"
+            "uri" : "schuhescheide_normal.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schuhe+scheide",
-            "uri" : "schuhescheide.jpg"
+            "uri" : "schuhescheide.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schuhe+scheide_roughness",
-            "uri" : "schuhescheide_roughness.jpg"
+            "uri" : "schuhescheide_roughness.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "hose_lp_normal",
-            "uri" : "hose_lp_normal.jpg"
+            "uri" : "hose_lp_normal.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "hose_lp",
-            "uri" : "hose_lp.jpg"
+            "uri" : "hose_lp.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "helm_normal",
-            "uri" : "helm_normal.jpg"
+            "uri" : "helm_normal.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schulterschutz_normal_1k",
-            "uri" : "schulterschutz_normal_1k.jpg"
+            "uri" : "schulterschutz_normal_1k.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schulterschutz_diffuse_1k",
-            "uri" : "schulterschutz_diffuse_1k.jpg"
+            "uri" : "schulterschutz_diffuse_1k.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schulterschutz_roughness_1k",
-            "uri" : "schulterschutz_roughness_1k.jpg"
+            "uri" : "schulterschutz_roughness_1k.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "Kettenhemd_normal1k",
-            "uri" : "Kettenhemd_normal1k.jpg"
+            "uri" : "Kettenhemd_normal1k.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "kettenhemd_diffuse1k",
-            "uri" : "kettenhemd_diffuse1k.jpg"
+            "uri" : "kettenhemd_diffuse1k.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "kettenhemd_roughness1k",
-            "uri" : "kettenhemd_roughness1k.jpg"
+            "uri" : "kettenhemd_roughness1k.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "gesicht_normal",
-            "uri" : "gesicht_normal.jpg"
+            "uri" : "gesicht_normal.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "gesicht2",
-            "uri" : "gesicht2.jpg"
+            "uri" : "gesicht2.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "gesicht_roughness",
-            "uri" : "gesicht_roughness.jpg"
+            "uri" : "gesicht_roughness.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schwert_lp_normal",
-            "uri" : "schwert_lp_normal.jpg"
+            "uri" : "schwert_lp_normal.png"
         },
         {
-            "mimeType" : "image/jpg",
-            "name" : "schild+schwert.jpg",
-            "uri" : "schildschwert_png.jpg"
+            "mimeType" : "image/png",
+            "name" : "schild+schwert.png",
+            "uri" : "schildschwert_png.png"
         },
         {
-            "mimeType" : "image/jpg",
+            "mimeType" : "image/png",
             "name" : "schild+schwert_roughness",
-            "uri" : "schildschwert_roughness.jpg"
+            "uri" : "schildschwert_roughness.png"
         }
     ],
     "accessors" : [

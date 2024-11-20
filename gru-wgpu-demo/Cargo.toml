@@ -13,7 +13,7 @@ path = "src/main.rs"
 [dependencies]
 log = { version = "0.4.22", features = ["max_level_info", "release_max_level_info"] }
 gru-wgpu = { path = "../../gru-wgpu", features = ["all"] }
-gru-misc = { path = "../../gru-misc", features = ["math", "futures", "color", "jpg", "gltf", "file_tree"] }
+gru-misc = { path = "../../gru-misc", features = ["math", "futures", "color", "png", "gltf", "file_tree"] }
 ahash = { version = "0.8.11", default-features = false, features = ["no-rng", "std"] }
 
 [build-dependencies]

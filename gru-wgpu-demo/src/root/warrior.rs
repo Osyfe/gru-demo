@@ -1,5 +1,5 @@
 use gru_wgpu::{file, wgpu::{self, util::DeviceExt}};
-use gru_misc::{futures::*, color::Color, jpg, gltf, file_tree::*};
+use gru_misc::{futures::*, color::Color, image, gltf, file_tree::*};
 use std::{sync::Arc, ops::Range};
 use super::render::{self, Vertex};
 
@@ -8,9 +8,9 @@ fn float_to_u8(f: f32) -> u8
     (f.max(0.0).min(1.0) * 256.0) as u8
 }
 
-fn create_texture(device: &wgpu::Device, queue: &wgpu::Queue, data: jpg::JPG, format: wgpu::TextureFormat) -> wgpu::Texture
+fn create_texture(device: &wgpu::Device, queue: &wgpu::Queue, data: image::Image, format: wgpu::TextureFormat) -> wgpu::Texture
 {
-    let jpg::JPG { width, height, channels: _, data } = data;
+    let image::Image { width, height, channels: _, data } = data;
     let texture_descr = wgpu::TextureDescriptor
     {
         label: None,
@@ -51,34 +51,36 @@ impl Warrior
         {
             if let gltf::TextureOrConstant::Constant(color) = &mesh.diffuse_texture
             {
-                let name = format!("{}_diffuse_synth.jpg", mesh.name);
+                let name = format!("{}_diffuse_synth.png", mesh.name);
                 let color = Color::from_normalized_linear(color[0], color[1], color[2], color[3]);
                 let color = color.to_normalized_srgb();
                 let color = [color.0, color.1, color.2, color.3];
-                let data = jpg::JPG { width: 1, height: 1, channels: 4, data: color.into_iter().map(float_to_u8).collect() };
+                let data = image::Image { width: 1, height: 1, channels: 4, data: color.into_iter().map(float_to_u8).collect() };
                 let texture = create_texture(&device, &queue, data, wgpu::TextureFormat::Rgba8UnormSrgb);
                 textures.insert(name.clone(), texture);
                 mesh.diffuse_texture = gltf::TextureOrConstant::Texture(name);
             }
             if let None = &mesh.normal_texture
             {
-                let name = format!("{}_normal_synth.jpg", mesh.name);
-                let data = jpg::JPG { width: 1, height: 1, channels: 4, data: [0.5, 0.5, 1.0, 1.0].into_iter().map(float_to_u8).collect() };
+                let name = format!("{}_normal_synth.png", mesh.name);
+                let data = image::Image { width: 1, height: 1, channels: 4, data: [0.5, 0.5, 1.0, 1.0].into_iter().map(float_to_u8).collect() };
                 let texture = create_texture(&device, &queue, data, wgpu::TextureFormat::Rgba8Unorm);
                 textures.insert(name.clone(), texture);
                 mesh.normal_texture = Some(name);
             }
             if let gltf::TextureOrConstant::Constant(color) = &mesh.roughness_texture
             {
-                let name = format!("{}_roughness_synth.jpg", mesh.name);
-                let data = jpg::JPG { width: 1, height: 1, channels: 1, data: vec![float_to_u8(color[0])] };
+                let name = format!("{}_roughness_synth.png", mesh.name);
+                let data = image::Image { width: 1, height: 1, channels: 1, data: vec![float_to_u8(color[0])] };
                 let texture = create_texture(&device, &queue, data, wgpu::TextureFormat::R8Unorm);
                 textures.insert(name.clone(), texture);
                 mesh.roughness_texture = gltf::TextureOrConstant::Texture(name);
             }
+            yield_now().await;
         }
         //link textures to meshes
         let (bind_group_layout, sampler) = render::texture_bind_group_layout(&device);
+        yield_now().await;
         let meshes = meshes.into_iter().map(|mesh|
         {
             let diffuse = match mesh.diffuse_texture
@@ -126,12 +128,14 @@ impl Warrior
         }
 
         //patch indices (WebGL does not support base_vertex)
+        yield_now().await;
         for mesh in &model.meshes
         {
             let base_vertex = mesh.vertices.start as u32;
             for index in &mut model.indices[mesh.indices.clone()] { *index += base_vertex; }
         }
 
+        yield_now().await;
         let data = unsafe { std::slice::from_raw_parts(vertices.as_ptr() as *const u8, vertices.len() * std::mem::size_of::<Vertex>()) };
         let buffer_descr = wgpu::util::BufferInitDescriptor
         {
@@ -167,8 +171,8 @@ impl Warrior
                 };
             async fn texture(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, file: file::File, format: wgpu::TextureFormat) -> wgpu::Texture
             {
-                let jpg = file.await.unwrap();
-                let mut data = jpg::JPG::decode(&jpg, jpg::Config::new());
+                let img = file.await.unwrap();
+                let mut data = image::Image::decode(&img, image::Config::new(image::Format::Png));
                 //roughness texture but loaded 4 channels -> extract green channel (lol)
                 if format == wgpu::TextureFormat::R8Unorm { data.extract_channel(1); }
                 create_texture(&device, &queue, data, format)
