@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 gru-vulkan = { path = "../../gru-vulkan", features = ["linked", "math"] }
 gru-misc = { path = "../../gru-misc", features = ["math", "marching_cubes", "text_sdf", "time"] }
-winit = "0.28.6"
+winit = "0.29.15"
 noise = "0.7.0"
-image = { version = "0.23.14", default-features = false, features = ["png"] }
-rand = "0.8.4"
+image = { version = "0.25.5", default-features = false, features = ["png"] }
+rand = "0.8.5"
 ahash = { version = "0.8.11", default-features = false, features = ["no-rng", "std"] }

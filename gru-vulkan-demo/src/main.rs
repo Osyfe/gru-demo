@@ -6,8 +6,8 @@ mod flash;
 
 use gru_vulkan::*;
 use gru_misc::{math::*, text_sdf::*, time::*, marching_cubes};
-use winit::{*, event_loop::ControlFlow, event::{VirtualKeyCode, ElementState}};
-use noise::{self, Seedable, NoiseFn};
+use winit::{*, event::ElementState, keyboard::{PhysicalKey, KeyCode}};
+use noise::{self, NoiseFn, Seedable};
 use std::{sync::{mpsc, Arc, Mutex}, collections::hash_map};
 use ahash::{AHashMap as HashMap, AHashSet as HashSet};
 use mold::Mold;
@@ -82,7 +82,7 @@ pub struct TextVertex
 fn main()
 {
 //window setup
-    let mut event_loop = event_loop::EventLoop::new();
+    let mut event_loop = event_loop::EventLoop::new().unwrap();
     let window = window::WindowBuilder::new()
         .with_title("gru_vulkan_demo: Cave Jumper")
         .with_inner_size(dpi::PhysicalSize { width: 1024.0_f32, height: 768.0 })
@@ -90,8 +90,8 @@ fn main()
         .with_resizable(false)
         .build(&event_loop)
         .unwrap();
-    window.set_cursor_visible(false);
     window.set_cursor_grab(window::CursorGrabMode::Confined).unwrap();
+    window.set_cursor_visible(false);
     //let monitor = window.available_monitors().nth(0).unwrap();
     //let mode = monitor.video_modes().nth(0).unwrap();
     //window.set_fullscreen(Some(window::Fullscreen::Exclusive(mode)));
@@ -100,9 +100,9 @@ fn main()
 //initialization, queue fetching and swapchain creation
     let instance = Instance::new(Some(&window));
     let physical_devices = instance.physical_devices();
-    let geforce = &physical_devices[0];
-    let graphic_queue_family_info = &geforce.queue_families()[0];
-    let device = instance.logical_device(geforce, vec![(graphic_queue_family_info, vec![1.0])]);
+    let gpu = &physical_devices[0];
+    let graphic_queue_family_info = &gpu.queue_families()[0];
+    let device = instance.logical_device(gpu, vec![(graphic_queue_family_info, vec![1.0])]);
     let graphic_queue_family = device.get_queue_family(graphic_queue_family_info);
     let graphic_queue = graphic_queue_family.get_queue(0);
     let command_pool = device.new_command_pool(graphic_queue_family);
@@ -110,7 +110,8 @@ fn main()
 //texture
     let (image_type, texture, sampler) =
     {
-        let img = image::io::Reader::open("data/rocks.png").unwrap().decode().unwrap().to_bgra8();
+        let mut img = image::ImageReader::open("data/rocks.png").unwrap().decode().unwrap().into_rgba8();
+        for [r, _, b, _] in img.enumerate_pixels_mut().map(|(_, _, p)| &mut p.0) { std::mem::swap(r, b); }
         let (tex_width, tex_height) = img.dimensions();
         let image_type = ImageType { channel: ImageChannelType::BgraSrgb, width: tex_width, height: tex_height, layers: ImageLayers::Single };
         let mut stage_buffer = device.new_image_buffer(image_type);
@@ -122,7 +123,8 @@ fn main()
             min_filter: SamplerFilter::Linear,
             mag_filter: SamplerFilter::Linear,
             mipmap_filter: SamplerFilter::Linear,
-            address_mode: SamplerAddressMode::Repeat
+            address_mode: SamplerAddressMode::Repeat,
+            anisotropy: true
         });
         (image_type, texture, sampler)
     };
@@ -183,9 +185,9 @@ fn main()
     };
     let mut flashes = Vec::new();
 //descriptors
-    let cam_descriptor_layout = device.new_descriptor_set_layout(0, vec![DescriptorBindingInfo::from_struct::<CamBinding>(1, true, false)]);
-    let light_descriptor_layout = device.new_descriptor_set_layout(1, vec![DescriptorBindingInfo::from_struct::<LightBinding>(1, true, true)]);
-    let text_descriptor_layout = device.new_descriptor_set_layout(0, vec![DescriptorBindingInfo::from_struct::<TextBinding>(1, true, true), DescriptorBindingInfo::from_sampler(atlas_image_type.channel, 1, false, true)]);
+    let cam_descriptor_layout = device.new_descriptor_set_layout(0, vec![DescriptorBindingInfo::from_struct::<CamBinding>(1, DescriptorVisibility::vertex())]);
+    let light_descriptor_layout = device.new_descriptor_set_layout(1, vec![DescriptorBindingInfo::from_struct::<LightBinding>(1, DescriptorVisibility::graphic_full())]);
+    let text_descriptor_layout = device.new_descriptor_set_layout(0, vec![DescriptorBindingInfo::from_struct::<TextBinding>(1, DescriptorVisibility::graphic_full()), DescriptorBindingInfo::from_sampler(atlas_image_type.channel, 1, DescriptorVisibility::fragment())]);
     let mut uniform_descriptors = swapchain.new_objects(&mut |_| device.new_descriptor_sets(&[(&cam_descriptor_layout, 1), (&light_descriptor_layout, 1), (&text_descriptor_layout, 1)]));
     for (descriptor, buffer) in uniform_descriptors.iter_mut().zip(dynamic_buffers.iter())
     {
@@ -194,7 +196,7 @@ fn main()
         descriptor[2][0].update_struct(0, &buffer, &text_uniform_view);
         descriptor[2][0].update_sampler(1, &[&atlas_image], &sampler);
     }
-    let tex_descriptor_layout = device.new_descriptor_set_layout(2, vec![DescriptorBindingInfo::from_sampler(image_type.channel, 1, false, true)]);
+    let tex_descriptor_layout = device.new_descriptor_set_layout(2, vec![DescriptorBindingInfo::from_sampler(image_type.channel, 1, DescriptorVisibility::fragment())]);
     let mut tex_descriptor = device.new_descriptor_sets(&[(&tex_descriptor_layout, 1)]).remove(0).remove(0);
     tex_descriptor.update_sampler(0, &[&texture], &sampler);
 //cave
@@ -233,36 +235,43 @@ fn main()
     //renderpass & pipeline creation
     let render_pass = device.new_render_pass
     (
-        &[
-            RenderPassColorAttachment::Image
+        RenderPassInfo
+        {
+            color_attachments:
+            &[
+                RenderPassColorAttachment::Image
+                {
+                    image_channel_type: Swapchain::IMAGE_CHANNEL_TYPE,
+                    samples: msaa,
+                    load: ColorAttachmentLoad::DontCare,
+                    store: AttachmentStore::Store,
+                    initial_layout: ImageLayout::Undefined,
+                    final_layout: ImageLayout::Attachment
+                },
+                RenderPassColorAttachment::Swapchain(SwapchainLoad::DontCare)
+            ],
+            depth_attachment: Some(RenderPassDepthAttachment
             {
-                image_channel_type: Swapchain::IMAGE_CHANNEL_TYPE,
+                image_channel_type: ImageChannelType::DSfloat,
                 samples: msaa,
-                load: ColorAttachmentLoad::DontCare,
-                store: AttachmentStore::Store,
+                load: DepthAttachmentLoad::Clear { depth: 1.0 },
+                store: AttachmentStore::DontCare,
                 initial_layout: ImageLayout::Undefined,
                 final_layout: ImageLayout::Attachment
-            },
-            RenderPassColorAttachment::Swapchain(SwapchainLoad::DontCare)
-        ],
-        Some(RenderPassDepthAttachment
-        {
-            image_channel_type: ImageChannelType::DSfloat,
-            samples: msaa,
-            load: DepthAttachmentLoad::Clear { depth: 1.0 },
-            store: AttachmentStore::DontCare,
-            initial_layout: ImageLayout::Undefined,
-            final_layout: ImageLayout::Attachment
-        }),
-        &[Subpass
-        {
-            input_attachments: &[],
-            output_attachments: &[OutputAttachment { attachment_index: 0, fragment_out_location: 0 }],
-            resolve_attachments: Some(&[ResolveAttachment::Index(1)]),
-            depth_attachment: true
-        }]
+            }),
+            subpasses:
+            &[
+                Subpass
+                {
+                    input_attachments: &[],
+                    output_attachments: &[OutputAttachment { attachment_index: 0, fragment_out_location: 0 }],
+                    resolve_attachments: Some(&[ResolveAttachment::Index(1)]),
+                    depth_attachment: true
+                }
+            ]
+        }
     );
-    let framebuffers = swapchain.new_objects(&mut |index| device.new_framebuffer(&render_pass, &[FramebufferAttachment::Image(&color_buffer), FramebufferAttachment::Swapchain(swapchain.get_image(index)), FramebufferAttachment::Image(&depth_buffer)]));
+    let framebuffers = swapchain.new_objects(&mut |index| device.new_framebuffer(&render_pass, &[FramebufferAttachment::image(&color_buffer), FramebufferAttachment::Swapchain(swapchain.get_image(index)), FramebufferAttachment::image(&depth_buffer)]));
     let pipeline_layout = device.new_pipeline_layout(&[&cam_descriptor_layout, &light_descriptor_layout, &tex_descriptor_layout], None);
     let text_pipeline_layout = device.new_pipeline_layout(&[&text_descriptor_layout], None);
     let mut pipeline_info = PipelineInfo
@@ -274,7 +283,7 @@ fn main()
         line_width: 1.0,
         polygon: PipelinePolygon::Fill,
         cull: PipelineCull::Back,
-        depth_test: true,
+        depth_test: DepthTest::Normal,
         blend: false
     };
     //pipeline_info.cull = PipelineCull::None;
@@ -299,7 +308,7 @@ fn main()
         &[], &pipeline_layout,
         &pipeline_info
     );
-    pipeline_info.depth_test = false;
+    pipeline_info.depth_test = DepthTest::None;
     pipeline_info.blend = true;
     let text_pipeline = device.new_pipeline
     (
@@ -309,8 +318,8 @@ fn main()
         &pipeline_info
     );
     //synchronization elements
-    let image_available = swapchain.new_cycle(&mut || device.new_semaphore());
-    let rendering_finished = swapchain.new_cycle(&mut || device.new_semaphore());
+    let image_available = swapchain.new_cycle(&mut || device.new_semaphore(WaitStage::VertexInput));
+    let rendering_finished = swapchain.new_cycle(&mut || device.new_semaphore(WaitStage::None));
     let may_begin_drawing = swapchain.new_cycle(&mut || device.new_fence(true));
 //command buffer creation and filling
     let command_buffers = std::cell::RefCell::new(swapchain.new_objects(&mut |_| command_pool.new_command_buffer()));
@@ -359,31 +368,31 @@ fn main()
     let mut time = -consts::WAIT_TIME;
     let mut ambient_flash = Vec3(0.0, 0.0, 0.0);
     window.set_visible(true);
-    use winit::platform::run_return::EventLoopExtRunReturn;
-    event_loop.run_return(|event, _, control_flow|
+    use winit::platform::run_on_demand::EventLoopExtRunOnDemand;
+    event_loop.run_on_demand(|event, control_flow|
     {
         match event
         {
-            event::Event::WindowEvent { window_id: _, event } =>
+            event::Event::WindowEvent { window_id: _, event } if event != event::WindowEvent::RedrawRequested =>
             {
                 match event
                 {
-                    event::WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                    event::WindowEvent::KeyboardInput { device_id: _, input, is_synthetic: _ } =>
+                    event::WindowEvent::CloseRequested => control_flow.exit(),
+                    event::WindowEvent::KeyboardInput { event, .. } =>
                     {
-                        if let Some(virtual_keycode) = input.virtual_keycode
+                        if let PhysicalKey::Code(keycode) = event.physical_key
                         {
-                            match virtual_keycode
+                            match keycode
                             {
-                                VirtualKeyCode::W => cam.forward = input.state == ElementState::Pressed,
-                                VirtualKeyCode::S => cam.backward = input.state == ElementState::Pressed,
-                                VirtualKeyCode::A => cam.left = input.state == ElementState::Pressed,
-                                VirtualKeyCode::D => cam.right = input.state == ElementState::Pressed,
-                                VirtualKeyCode::Space => cam.jump(),
-                                VirtualKeyCode::K => cam.does_physics = false,
-                                VirtualKeyCode::L => cam.does_physics = true,
-                                VirtualKeyCode::Escape => *control_flow = ControlFlow::Exit,
-                                VirtualKeyCode::P => if input.state == ElementState::Pressed { shot = true },
+                                KeyCode::KeyW => cam.forward = event.state == ElementState::Pressed,
+                                KeyCode::KeyS => cam.backward = event.state == ElementState::Pressed,
+                                KeyCode::KeyA => cam.left = event.state == ElementState::Pressed,
+                                KeyCode::KeyD => cam.right = event.state == ElementState::Pressed,
+                                KeyCode::Space => cam.jump(),
+                                KeyCode::KeyK => cam.does_physics = false,
+                                KeyCode::KeyL => cam.does_physics = true,
+                                KeyCode::Escape => control_flow.exit(),
+                                KeyCode::KeyP => if event.state == ElementState::Pressed { shot = true },
                                 _ => {}
                             };
                         }
@@ -404,7 +413,7 @@ fn main()
                     _ => {}
                 }
             },
-            winit::event::Event::MainEventsCleared =>
+            winit::event::Event::WindowEvent { event: event::WindowEvent::RedrawRequested, .. } =>
             {
                 //logic
                 let dt = fps.dt();
@@ -481,7 +490,7 @@ fn main()
                 //compute score
                 let z_bias = consts::Z_BIAS_OFFSET + consts::C * time.max(0.0);
                 let score = consts::MAX_BIAS - (z_bias - cam.pos.2);
-                if score <= 0.0 { *control_flow = ControlFlow::Exit; }
+                if score <= 0.0 { control_flow.exit(); }
                 let score_digits = format!("{:03}", score.round() as u32);
                 text_vertices.clear();
                 text_indices.clear();
@@ -536,7 +545,7 @@ fn main()
                         *rerecord = false;
                     }
                     let graphic_queue = graphic_queue.lock().unwrap();
-                    command_buffers.borrow().get(&image_index).submit(&graphic_queue, Some(&image_available), Some(&rendering_finished), &may_begin_drawing);
+                    command_buffers.borrow().get(&image_index).submit(&graphic_queue, [image_available], [rendering_finished], Some(&may_begin_drawing));
                     if shot
                     {
                         let image_type = ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: ImageLayers::Single };
@@ -550,7 +559,8 @@ fn main()
                             let mut image = Vec::with_capacity(buffer.size());
                             image.resize(buffer.size(), 0);
                             buffer.read(&mut image);
-                            let image = image::DynamicImage::ImageBgra8(image::ImageBuffer::from_raw(width, height, image).unwrap()).into_rgba8();
+                            let mut image = image::DynamicImage::ImageRgba8(image::ImageBuffer::from_raw(width, height, image).unwrap()).into_rgba8();
+                            for [r, _, b, _] in image.enumerate_pixels_mut().map(|(_, _, p)| &mut p.0) { std::mem::swap(r, b); }
                             image.save_with_format("screenshot.png", image::ImageFormat::Png).unwrap();
                             println!("screenshot saved");
                         });
@@ -558,10 +568,12 @@ fn main()
                     }
                     swapchain.present(image_index, &graphic_queue, &rendering_finished);
                 }
+
+                window.request_redraw();
             },
             _ => {}
         }
-    });
+    }).unwrap();
 //wait for shutdown
     for generator in generators { generator.shutdown(); }
     device.idle();
