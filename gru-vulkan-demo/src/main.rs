@@ -318,7 +318,7 @@ fn main()
         &pipeline_info
     );
     //synchronization elements
-    let image_available = swapchain.new_cycle(&mut || device.new_semaphore(WaitStage::VertexInput));
+    let image_available = swapchain.new_cycle(&mut || device.new_semaphore(WaitStage::ColorOutput));
     let rendering_finished = swapchain.new_cycle(&mut || device.new_semaphore(WaitStage::None));
     let may_begin_drawing = swapchain.new_cycle(&mut || device.new_fence(true));
 //command buffer creation and filling
