@@ -66,7 +66,8 @@ impl App for Demo
             let ui_binding = UiBinding::new(gl);
             let widget = ui();
             let font = Font::new(include_bytes!("../res/Latinia.ttf"));
-            let ui = ui::Ui::new(font, widget);
+            let ui_init = ui::UiInit::new(font);
+            let ui = ui::Ui::new(ui_init, widget);
 
             (ui_data, ui, ui_binding)
         };

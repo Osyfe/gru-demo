@@ -1,6 +1,6 @@
 [workspace]
 members = ["gru-opengl-demo", "gru-wgpu-demo", "gru-vulkan-demo", "gru-script-demo", "gru-steam-demo"]
-resolver = "2"
+resolver = "3"
 
 [profile.dev]
 opt-level = 1

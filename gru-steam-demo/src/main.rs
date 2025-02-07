@@ -24,7 +24,8 @@ impl App for Game
         ctx.set_title("gru_steam_demo: Rock Paper Scissor");
         ctx.set_window_dims((800, 450));
         let font = ui::text::Font::new(include_bytes!("../res/Latinia.ttf"));
-        let ui = ui::Ui::new(font, ui_utils::build());
+        let ui_init = ui::UiInit::new(font);
+        let ui = ui::Ui::new(ui_init, ui_utils::build());
         let binding = ui_binding::Binding::new(ctx.gl());
         let data = data::Data::new(steam);
         Self { ui, binding, data }
