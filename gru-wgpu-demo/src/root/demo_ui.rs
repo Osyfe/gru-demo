@@ -79,5 +79,5 @@ pub fn build() -> ui::Ui<'static, Demo, UiEvent>
         col.boxed()
     });
 
-    ui::Ui::new(font, dynamic)
+    ui::Ui::new(ui::UiInit::new(font), dynamic)
 }

@@ -30,7 +30,7 @@ pub struct Demo
 
 impl App for Demo
 {
-    const BACKENDS: wgpu::Backends = wgpu::Backends::GL;
+    const BACKENDS: wgpu::Backends = wgpu::Backends::union(wgpu::Backends::DX12, wgpu::Backends::GL);
     const DEPTH_FORMAT: Option<wgpu::TextureFormat> = Some(render::DEPTH_FORMAT);
     type Init = ();
     type UiEvent = demo_ui::UiEvent;
@@ -106,6 +106,7 @@ impl App for Demo
                     label: None,
                     format: None,
                     dimension: Some(wgpu::TextureViewDimension::D2),
+                    usage: Some(wgpu::TextureUsages::empty()),
                     aspect: wgpu::TextureAspect::DepthOnly,
                     base_mip_level: 0,
                     mip_level_count: None,
