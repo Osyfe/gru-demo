@@ -1,6 +1,6 @@
 use gru_opengl::{log, App, Context, gl::*, event, ui::Binding as UiBinding, resource::{ResSys, ResourceSystem}};
 use gru_misc::{math::*, text_sdf::*};
-use gru_ui as ui;
+use gru_ui::{self as ui, lens::Lens};
 use ui::event::*;
 
 mod cube;
@@ -19,7 +19,12 @@ struct InputData
     mouse_down: bool
 }
 
-type UiData = String;
+#[derive(Lens)]
+struct UiData
+{
+    greeting: String,
+    float: f32,
+}
 
 #[derive(Clone)]
 enum UiTag
@@ -62,7 +67,11 @@ impl App for Demo
         //ui
         let (ui_data, ui, ui_binding) =
         {
-            let ui_data = "Hello gru_ui!".to_owned();
+            let ui_data = UiData
+            {
+                greeting: "Hello gru_ui!".to_owned(),
+                float: 0.5,
+            };
             let ui_binding = UiBinding::new(gl);
             let widget = ui();
             let font = Font::new(include_bytes!("../res/Latinia.ttf"));
@@ -200,13 +209,15 @@ impl App for Demo
 
 fn ui() -> impl ui::Widget<UiData, UiTag>
 {
-    use ui::widget::{WidgetExt, primitive::*, layout::*};
+    use ui::{lens::*, widget::{WidgetExt, primitive::*, layout::*}};
 
     let col = Flex::column()
-        .with(Label::new().size(3.0))
-        .with(Label::new().size(5.0).bg().response().event(UiTag::Button).align().horizontal(AlignLayout::Back))
-        .with(Label::new().size(1.0))
-        .layout(FlexLayout::PadAll);
+        .with(Label::new().size(2.0).bg().response().event(UiTag::Button).align().horizontal(AlignLayout::Back).lens(UiData::greeting))
+        .with(Slider::new().step(0.01).lens(UiData::float).align())
+        .padding(1.0)
+        .layout(FlexLayout::PadAll)
+        .pad().all(3.0)
+        .align();
 
     col
 }
