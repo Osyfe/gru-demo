@@ -174,8 +174,8 @@ fn main()
         let index_view = buffer_layout.add_indices(indices.len() as u32);
         let instance_view = buffer_layout.add_attributes((consts::BLOCK_SPAWN_FRONT_DISTANCE + consts::BLOCK_DESPAWN_BACK_DISTANCE) as u32 * 2);
         let buffer_layout = buffer_layout.build();
-        let mut buffers = swapchain.new_objects(&mut |_| device.new_buffer(&buffer_layout, BufferUsage::Dynamic));
-        for buffer in buffers.iter_mut()
+        let mut buffers = SwapchainCycle::<2, _>::new(&mut || device.new_buffer(&buffer_layout, BufferUsage::Dynamic));
+        for buffer in buffers.slice()
         {
             let mut map = buffer.map();
             map.write_attributes(&vertex_view, 0, &vertices);
@@ -188,8 +188,8 @@ fn main()
     let cam_descriptor_layout = device.new_descriptor_set_layout(0, vec![DescriptorBindingInfo::from_struct::<CamBinding>(1, DescriptorVisibility::vertex())]);
     let light_descriptor_layout = device.new_descriptor_set_layout(1, vec![DescriptorBindingInfo::from_struct::<LightBinding>(1, DescriptorVisibility::graphic_full())]);
     let text_descriptor_layout = device.new_descriptor_set_layout(0, vec![DescriptorBindingInfo::from_struct::<TextBinding>(1, DescriptorVisibility::graphic_full()), DescriptorBindingInfo::from_sampler(atlas_image_type.channel, 1, DescriptorVisibility::fragment())]);
-    let mut uniform_descriptors = swapchain.new_objects(&mut |_| device.new_descriptor_sets(&[(&cam_descriptor_layout, 1), (&light_descriptor_layout, 1), (&text_descriptor_layout, 1)]));
-    for (descriptor, buffer) in uniform_descriptors.iter_mut().zip(dynamic_buffers.iter())
+    let mut uniform_descriptors = SwapchainCycle::<2, _>::new(&mut || device.new_descriptor_sets(&[(&cam_descriptor_layout, 1), (&light_descriptor_layout, 1), (&text_descriptor_layout, 1)]));
+    for (descriptor, buffer) in uniform_descriptors.slice().iter_mut().zip(dynamic_buffers.slice())
     {
         descriptor[0][0].update_struct(0, &buffer, &cam_view);
         descriptor[1][0].update_struct(0, &buffer, &light_view);
@@ -214,7 +214,6 @@ fn main()
     let light_perlin = noise::Perlin::new();
 	let blocks = std::cell::RefCell::new(HashMap::<i32, cave::CylinderBlock>::new());
     let mut blocks_requested = HashSet::new();
-    let mut block_graveyard = swapchain.new_cycle(&mut || Vec::new());
     let generators = vec!
     [
         cave::BlockGenerator::new(&device, graphic_queue_family_info, mold_gen()),
@@ -318,48 +317,23 @@ fn main()
         &pipeline_info
     );
     //synchronization elements
-    let image_available = swapchain.new_cycle(&mut || device.new_semaphore(WaitStage::ColorOutput));
-    let rendering_finished = swapchain.new_cycle(&mut || device.new_semaphore(WaitStage::None));
-    let may_begin_drawing = swapchain.new_cycle(&mut || device.new_fence(true));
-//command buffer creation and filling
-    let command_buffers = std::cell::RefCell::new(swapchain.new_objects(&mut |_| command_pool.new_command_buffer()));
-    let commander = |image_index: &SwapchainObjectIndex, dynamic_buffer: &Buffer, flash_count: u32, text_index_count: u32|
+    struct SyncStuff
     {
-        let mut command_buffers_borrow = command_buffers.borrow_mut();
-        let command_buffer = command_buffers_borrow.get_mut(image_index);
-        let framebuffer = framebuffers.get(image_index);
-        let uniform_descriptor = uniform_descriptors.get(image_index);
-        let mut record = command_buffer.record();
-        let mut pass = record.render_pass(&render_pass, &framebuffer);
-        pass
-            .bind_descriptor_sets(&pipeline_layout, &[&uniform_descriptor[0][0], &uniform_descriptor[1][0], &tex_descriptor])
-            .bind_pipeline(&cave_pipeline);
-        for block in blocks.borrow().values()
-        {
-            pass
-                .bind_attributes(0, [AttributeBinding::from::<Vertex>(&block.buffer, &block.vertex_view)])
-                .bind_indices(IndexBinding::from(&block.buffer, &block.index_view))
-                .draw(DrawMode::index(block.index_view.count()));
-        }
-        pass
-            .bind_pipeline(&flash_pipeline)
-            .bind_attributes(0, [
-                AttributeBinding::from::<flash::FlashVertex>(&dynamic_buffer, &flash_vertex_view),
-                AttributeBinding::from::<flash::FlashInstance>(&dynamic_buffer, &flash_instance_view)
-            ])
-            .bind_indices(IndexBinding::from(&dynamic_buffer, &flash_index_view))
-            .draw(DrawMode::index_instanced(flash_index_view.count(), flash_count));
-        pass
-            .bind_pipeline(&bg_pipeline)
-            .draw(DrawMode::vertex(36));
-        pass
-            .bind_pipeline(&text_pipeline)
-            .bind_descriptor_sets(&text_pipeline_layout, &[&uniform_descriptor[2][0]])
-            .bind_attributes(0, [AttributeBinding::from::<TextVertex>(&dynamic_buffer, &text_vertex_view)])
-            .bind_indices(IndexBinding::from(&dynamic_buffer, &text_index_view))
-            .draw(DrawMode::index(text_index_count));
-    };
-    let mut rerecord = swapchain.new_objects(&mut |_| true);
+        command_buffer: CommandBuffer,
+        image_available: Semaphore,
+        rendering_finished: Semaphore,
+        may_begin_drawing: Fence,
+        graveyard: Vec<cave::CylinderBlock>
+    }
+    let mut sync_stuff = SwapchainCycle::<2, _>::new(&mut || SyncStuff
+    {
+        command_buffer: command_pool.new_command_buffer(),
+        image_available: device.new_semaphore(WaitStage::ColorOutput),
+        rendering_finished: device.new_semaphore(WaitStage::None),
+        may_begin_drawing: device.new_fence(true),
+        graveyard: Vec::new()
+    });
+
 //screenshots
     let mut shot = false;
     let mut shot_command_buffer: Option<CommandBuffer> = None;
@@ -420,7 +394,6 @@ fn main()
                 time += dt;
                 ambient_flash = ambient_flash * consts::FLASH_AMBIENT_DECAY.powf(dt);
                 cam.logic(dt, &mold);
-                block_graveyard.get_mut(&swapchain).clear();
                 let mut blocks_changed = false;
 
                 let cam_norm = cam.pos.2 / consts::BLOCK_LENGTH;
@@ -452,7 +425,7 @@ fn main()
                         if let Some(block) = blocks.borrow_mut().insert(block.z, block)
                         {
                             println!("Regenerated block {}!", block.z);
-                            block_graveyard.get_mut(&swapchain).push(block);
+                            sync_stuff.get_current().graveyard.push(block);
                         }
                     }
                 }
@@ -474,8 +447,7 @@ fn main()
                     if (cam_norm - block.z as f32).floor() as i32 >= consts::BLOCK_DESPAWN_BACK_DISTANCE { blocks_remove.push(block.z); }
                 }
                 if !blocks_remove.is_empty() { blocks_changed = true; }
-                for block in blocks_remove { block_graveyard.get_mut(&swapchain).push(blocks.borrow_mut().remove(&block).unwrap()); }
-                if blocks_changed { rerecord.iter_mut().for_each(|b| *b = true); }
+                for block in blocks_remove { sync_stuff.get_current().graveyard.push(blocks.borrow_mut().remove(&block).unwrap()); }
                 if blocks_changed
                 {
                     flashes.clear();
@@ -502,20 +474,22 @@ fn main()
                     &mut |(cx, cy, cl), p: (f32, f32)| text_vertices.push(TextVertex { position: p.into(), tex_coords: (cx, cy, cl as f32).into() })
                 );
                 //render
-                let image_available = image_available.get(&swapchain);
-                let rendering_finished = rendering_finished.get(&swapchain);
-                let may_begin_drawing = may_begin_drawing.get(&swapchain);
+                let SyncStuff { command_buffer, image_available, rendering_finished, may_begin_drawing, graveyard } = sync_stuff.get_next();
+                may_begin_drawing.wait();
+                may_begin_drawing.reset();
+                graveyard.clear();
                 let maybe_image_index = swapchain.acquire_next_image(Some(&image_available), None);
+                let dynamic_buffer = dynamic_buffers.get_next();
+                let uniform_descriptor = uniform_descriptors.get_next();
+
                 if let Ok(image_index) = maybe_image_index
                 {
-                    may_begin_drawing.wait();
-                    may_begin_drawing.reset();
                     {
                         let light_on = light_perlin.get([time as f64 * consts::LIGHT_FREQUENCY, 0.0]) + consts::LIGHT_BIAS > 0.0;
                         let (proj, trans) = cam.mats();
                         let dir = trans.transpose() * Mat4::rotation_x(consts::LIGHT_ANGLE) * Vec4(0.0, 0.0, 1.0, 0.0);
                         let dir = (dir.0, dir.1, dir.2);
-                        let mut map = dynamic_buffers.get_mut(&image_index).map();
+                        let mut map = dynamic_buffer.map();
                         map.write_uniforms(&cam_view, 0, &[CamBinding { mat: proj * trans }]);
                         map.write_uniforms(&light_view, 0, &[LightBinding
                         {
@@ -538,14 +512,42 @@ fn main()
                         map.write_indices(&text_index_view, 0, &text_indices);
                         map.write_uniforms(&text_uniform_view, 0, &[TextBinding { aspect: width as f32 / height as f32, height: 0.1 }]);
                     }
-                    let rerecord = rerecord.get_mut(&image_index);
-                    if *rerecord
+                    
+                    let framebuffer = framebuffers.get(&image_index);
+                    let mut record = command_buffer.record();
+                    let mut pass = record.render_pass(&render_pass, &framebuffer);
+                    pass
+                        .bind_descriptor_sets(&pipeline_layout, &[&uniform_descriptor[0][0], &uniform_descriptor[1][0], &tex_descriptor])
+                        .bind_pipeline(&cave_pipeline);
+                    for block in blocks.borrow().values()
                     {
-                        commander(&image_index, &dynamic_buffers.get(&image_index), flashes.len() as u32, text_indices.len() as u32);
-                        *rerecord = false;
+                        pass
+                            .bind_attributes(0, [AttributeBinding::from::<Vertex>(&block.buffer, &block.vertex_view)])
+                            .bind_indices(IndexBinding::from(&block.buffer, &block.index_view))
+                            .draw(DrawMode::index(block.index_view.count()));
                     }
+                    pass
+                        .bind_pipeline(&flash_pipeline)
+                        .bind_attributes(0, [
+                            AttributeBinding::from::<flash::FlashVertex>(&dynamic_buffer, &flash_vertex_view),
+                            AttributeBinding::from::<flash::FlashInstance>(&dynamic_buffer, &flash_instance_view)
+                        ])
+                        .bind_indices(IndexBinding::from(&dynamic_buffer, &flash_index_view))
+                        .draw(DrawMode::index_instanced(flash_index_view.count(), flashes.len() as u32));
+                    pass
+                        .bind_pipeline(&bg_pipeline)
+                        .draw(DrawMode::vertex(36));
+                    pass
+                        .bind_pipeline(&text_pipeline)
+                        .bind_descriptor_sets(&text_pipeline_layout, &[&uniform_descriptor[2][0]])
+                        .bind_attributes(0, [AttributeBinding::from::<TextVertex>(&dynamic_buffer, &text_vertex_view)])
+                        .bind_indices(IndexBinding::from(&dynamic_buffer, &text_index_view))
+                        .draw(DrawMode::index(text_indices.len() as u32));
+                    drop(pass);
+                    drop(record);
+
                     let graphic_queue = graphic_queue.lock().unwrap();
-                    command_buffers.borrow().get(&image_index).submit(&graphic_queue, [image_available], [rendering_finished], Some(&may_begin_drawing));
+                    command_buffer.submit(&graphic_queue, [&image_available], [&rendering_finished], Some(&may_begin_drawing));
                     if shot
                     {
                         let image_type = ImageType { channel: Swapchain::IMAGE_CHANNEL_TYPE, width, height, layers: ImageLayers::Single };
@@ -566,7 +568,7 @@ fn main()
                         });
                         shot = false;
                     }
-                    swapchain.present(image_index, &graphic_queue, &rendering_finished);
+                    swapchain.present(image_index, &graphic_queue, [rendering_finished]);
                 }
 
                 window.request_redraw();
