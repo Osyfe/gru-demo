@@ -10,10 +10,11 @@ fn main() -> Result<(), Box<dyn Error>>
     for file in fs::read_dir("src/wgsl")?
     {
         let path = file?.path();
-        let src = std::fs::read_to_string(&path)?;
+        let src = fs::read_to_string(&path)?;
         if let Err(err) = compiler.parse(&src)
         {
-            err.emit_to_stderr_with_path(&src, &path);
+            let err_text = err.emit_to_string(&src);
+            fs::write(&path, err_text).unwrap();
             panic = true;
         }
     }

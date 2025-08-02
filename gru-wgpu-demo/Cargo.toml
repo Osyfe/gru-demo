@@ -17,4 +17,4 @@ gru-misc = { path = "../../gru-misc", features = ["math", "futures", "color", "p
 ahash = { version = "0.8.11", default-features = false, features = ["no-rng", "std"] }
 
 [build-dependencies]
-naga = { version = "25.0.1", features = ["wgsl-in"] }
+naga = { version = "26.0.0", features = ["wgsl-in"] }
