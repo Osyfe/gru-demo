@@ -209,7 +209,7 @@ impl App for Demo
 
 fn ui() -> impl ui::Widget<UiData, UiTag>
 {
-    use ui::{lens::*, widget::{WidgetExt, primitive::*, layout::*}};
+    use ui::{widget::{WidgetExt, primitive::*, layout::*}};
 
     let col = Flex::column()
         .with(Label::new().size(2.0).bg().response().event(UiTag::Button).align().horizontal(AlignLayout::Back).lens(UiData::greeting))

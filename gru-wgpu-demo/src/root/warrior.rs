@@ -1,6 +1,6 @@
 use gru_wgpu::{file, wgpu::{self, util::DeviceExt}};
 use gru_misc::{futures::*, color::Color, image, gltf, file_tree::*};
-use std::{sync::Arc, ops::Range};
+use std::ops::Range;
 use super::render::{self, Vertex};
 
 fn float_to_u8(f: f32) -> u8
@@ -41,7 +41,7 @@ pub struct Warrior
 
 impl Warrior
 {
-    pub async fn load(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> (Self, wgpu::BindGroupLayout)
+    pub async fn load(device: wgpu::Device, queue: wgpu::Queue) -> (Self, wgpu::BindGroupLayout)
     {
         let model = Self::load_model(&device);
         let textures = Self::load_textures(&device, &queue);
@@ -106,7 +106,7 @@ impl Warrior
         (Self { vertex_buffer, index_buffer, meshes, _textures: textures }, bind_group_layout)
     }
 
-    async fn load_model(device: &Arc<wgpu::Device>) -> (wgpu::Buffer, wgpu::Buffer, Vec<gltf::Mesh>)
+    async fn load_model(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::Buffer, Vec<gltf::Mesh>)
     {
         let mut loader = file::Loader::new();
         let gltf = loader.load("data/warrior/warrior.gltf");
@@ -155,7 +155,7 @@ impl Warrior
         (vertex_buffer, index_buffer, model.meshes)
     }
 
-    async fn load_textures(device: &Arc<wgpu::Device>, queue: &Arc<wgpu::Queue>) -> ahash::AHashMap<String, wgpu::Texture>
+    async fn load_textures(device: &wgpu::Device, queue: &wgpu::Queue) -> ahash::AHashMap<String, wgpu::Texture>
     {
         let mut loader = file::Loader::new();
         let list = tree!("gru-wgpu-demo/export/data/warrior/textures", "data/warrior/textures");
@@ -169,7 +169,7 @@ impl Warrior
                     if !file.name.contains("diffuse") { log::warn!("interpreted \"{}\" as diffuse texture", file.name); }
                     wgpu::TextureFormat::Rgba8UnormSrgb
                 };
-            async fn texture(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, file: file::File, format: wgpu::TextureFormat) -> wgpu::Texture
+            async fn texture(device: wgpu::Device, queue: wgpu::Queue, file: file::File, format: wgpu::TextureFormat) -> wgpu::Texture
             {
                 let img = file.await.unwrap();
                 let mut data = image::Image::decode(&img, image::Config::new(image::Format::Png));
