@@ -30,7 +30,7 @@ pub struct Demo
 
 impl App for Demo
 {
-    const BACKENDS: wgpu::Backends = wgpu::Backends::union(wgpu::Backends::DX12, wgpu::Backends::GL);
+    const BACKENDS: wgpu::Backends = wgpu::Backends::union(wgpu::Backends::VULKAN, wgpu::Backends::GL);
     const FEATURES: wgpu::Features = wgpu::Features::empty();
     const LIMITS: wgpu::Limits = wgpu::Limits::downlevel_webgl2_defaults();
     const UI_DEPTH_FORMAT: Option<wgpu::TextureFormat> = Some(render::DEPTH_FORMAT);
@@ -144,6 +144,7 @@ impl App for Demo
                 }),
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             };
             let mut rp = encoder.begin_render_pass(&render_pass_descr);
 

@@ -85,7 +85,7 @@ fn pipeline(device: &wgpu::Device, surface_format: wgpu::TextureFormat, uniform_
     {
         label: None,
         bind_group_layouts: &[&uniform_bind_group_layout, &texture_bind_group_layout],
-        push_constant_ranges: &[]
+        immediate_size: 0
     };
     let pipeline_layout = device.create_pipeline_layout(&pipeline_layout_descr);
 
@@ -166,7 +166,7 @@ fn pipeline(device: &wgpu::Device, surface_format: wgpu::TextureFormat, uniform_
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             targets: std::slice::from_ref(&color_target_state)
         }),
-        multiview: None,
+        multiview_mask: None,
         cache: None
     };
     device.create_render_pipeline(&pipeline_descr)
@@ -312,7 +312,7 @@ pub fn texture_bind_group_layout(device: &wgpu::Device) -> (wgpu::BindGroupLayou
         address_mode_w: wgpu::AddressMode::ClampToEdge,
         mag_filter: wgpu::FilterMode::Linear,
         min_filter: wgpu::FilterMode::Linear,
-        mipmap_filter: wgpu::FilterMode::Linear,
+        mipmap_filter: wgpu::MipmapFilterMode::Linear,
         lod_min_clamp: 0.0,
         lod_max_clamp: 32.0,
         compare: None,
