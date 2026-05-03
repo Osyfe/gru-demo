@@ -84,7 +84,7 @@ fn pipeline(device: &wgpu::Device, surface_format: wgpu::TextureFormat, uniform_
     let pipeline_layout_descr = wgpu::PipelineLayoutDescriptor
     {
         label: None,
-        bind_group_layouts: &[&uniform_bind_group_layout, &texture_bind_group_layout],
+        bind_group_layouts: &[Some(&uniform_bind_group_layout), Some(&texture_bind_group_layout)],
         immediate_size: 0
     };
     let pipeline_layout = device.create_pipeline_layout(&pipeline_layout_descr);
@@ -135,8 +135,8 @@ fn pipeline(device: &wgpu::Device, surface_format: wgpu::TextureFormat, uniform_
         depth_stencil: Some(wgpu::DepthStencilState
         {
             format: DEPTH_FORMAT,
-            depth_write_enabled: true,
-            depth_compare: wgpu::CompareFunction::Less,
+            depth_write_enabled: Some(true),
+            depth_compare: Some(wgpu::CompareFunction::Less),
             stencil: wgpu::StencilState
             {
                 front: wgpu::StencilFaceState
