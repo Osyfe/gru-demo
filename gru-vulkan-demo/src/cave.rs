@@ -1,7 +1,6 @@
 use super::*;
 use super::Vertex;
-use gru_misc::marching_cubes;
-use rand::distributions::{Distribution, Uniform};
+use gru_misc::{marching_cubes, rand::{rng_instant, Distribution, distr::Uniform}};
 
 pub struct CylinderBlock
 {
@@ -46,8 +45,8 @@ impl CylinderBlock
         };
         //Generate Flashes
         let mut flashes = Vec::with_capacity(1);
-        let range = Uniform::from(-consts::CAVE_RADIUS..consts::CAVE_RADIUS);
-        let mut rng = rand::thread_rng();
+        let range = Uniform::new_inclusive(-consts::CAVE_RADIUS, consts::CAVE_RADIUS).unwrap();
+        let mut rng = rng_instant();
         if range.sample(&mut rng) / consts::CAVE_RADIUS / 2.0 + 0.5 < consts::FLASH_BLOCK_PROB
         {
             let mut pos = Vec3(range.sample(&mut rng), range.sample(&mut rng), (z as f32 + range.sample(&mut rng) / consts::CAVE_RADIUS / 2.0) * consts::BLOCK_LENGTH);
@@ -91,7 +90,7 @@ impl BlockGenerator
     }
 
     pub fn request(&self, z: i32) { self.t_request.send(z).ok(); }
-    pub fn receive(&self) -> mpsc::TryIter<CylinderBlock> { self.r_block.try_iter() }
+    pub fn receive(&self) -> mpsc::TryIter<'_, CylinderBlock> { self.r_block.try_iter() }
 
     pub fn shutdown(self)
     {
@@ -100,7 +99,7 @@ impl BlockGenerator
     }
 }
 
-pub struct Cave<T: noise::NoiseFn<[f64; 3]>>
+pub struct Cave<T: noise::NoiseFn<f64, 3>>
 {
     pub fun: T,
     pub perlin: noise::Perlin,
@@ -109,7 +108,7 @@ pub struct Cave<T: noise::NoiseFn<[f64; 3]>>
     y0: f32
 }
 
-impl<T: noise::NoiseFn<[f64; 3]>> Cave<T>
+impl<T: noise::NoiseFn<f64, 3>> Cave<T>
 {
     pub fn new(fun: T, perlin: noise::Perlin, bias: f32) -> Self
     {
@@ -121,7 +120,7 @@ impl<T: noise::NoiseFn<[f64; 3]>> Cave<T>
     pub fn y0(&self) -> f32 { self.y0 }
 }
 
-impl<T: noise::NoiseFn<[f64; 3]>> mold::Mold for Cave<T>
+impl<T: noise::NoiseFn<f64, 3>> mold::Mold for Cave<T>
 {
     fn value(&self, Vec3(x, y, z): Vec3) -> f32
     {

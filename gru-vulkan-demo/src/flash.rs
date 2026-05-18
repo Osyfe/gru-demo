@@ -1,6 +1,6 @@
 use super::*;
 use crate::Vec3;
-use rand::distributions::{Distribution, Uniform};
+use gru_misc::rand::{rng_instant, Distribution, distr::Uniform};
 
 #[derive(VertexAttributeGroupReprCpacked)]
 #[repr(C, packed)]
@@ -38,8 +38,8 @@ impl mold::Mold for FlashMold
     
     fn color(&self, _: Vec3) -> Vec3 
     {
-        let range = Uniform::from(0.0..1.0);
-        let mut rng = rand::thread_rng();
+        let range = Uniform::new(0.0, 1.0).unwrap();
+        let mut rng = rng_instant();
         Vec3(range.sample(&mut rng), range.sample(&mut rng), range.sample(&mut rng)).unit()
     }
 }

@@ -7,7 +7,7 @@ mod flash;
 use gru_vulkan::*;
 use gru_misc::{math::*, text_sdf::*, time::*, marching_cubes};
 use winit::{*, event::ElementState, keyboard::{PhysicalKey, KeyCode}};
-use noise::{self, NoiseFn, Seedable};
+use noise::{self, NoiseFn};
 use std::{sync::{mpsc, Arc, Mutex}, collections::hash_map};
 use ahash::{AHashMap as HashMap, AHashSet as HashSet};
 use mold::Mold;
@@ -203,15 +203,15 @@ fn main()
     let seed = 0; //(std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)).unwrap().as_nanos() as u32;
     let mold_gen = ||
     {
-        let mut billow = noise::Billow::new().set_seed(seed);
+        let mut billow = noise::Billow::<noise::Perlin>::new(seed);
         billow.octaves = consts::CAVE_GEN_OCTAVES;
         billow.frequency = consts::CAVE_GEN_FREQUENCY;
         billow.lacunarity = consts::CAVE_GEN_LUCUNARITY;
         billow.persistence = consts::CAVE_GEN_PERSISTANCE;
-        cave::Cave::new(billow, noise::Perlin::new().set_seed(seed), consts::CAVE_GEN_BIAS)
+        cave::Cave::new(billow, noise::Perlin::new(seed), consts::CAVE_GEN_BIAS)
     };
     let mold = mold_gen();
-    let light_perlin = noise::Perlin::new();
+    let light_perlin = noise::Perlin::new(seed.wrapping_add(1));
 	let blocks = std::cell::RefCell::new(HashMap::<i32, cave::CylinderBlock>::new());
     let mut blocks_requested = HashSet::new();
     let generators = vec!
