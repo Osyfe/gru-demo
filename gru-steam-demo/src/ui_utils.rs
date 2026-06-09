@@ -31,7 +31,7 @@ fn menu() -> impl Widget<Data, EventTag>
         .pad().horizontal(1.0).vertical(1.0)
 }
 
-fn lobby(data: &mut Data) -> impl Widget<Data, EventTag>
+fn lobby(data: &mut Data) -> impl Widget<Data, EventTag> + 'static
 {
     Flex::column()
         .with(Label::new().size(2.0).own("Lobby").align().center_h())
@@ -108,7 +108,7 @@ fn game() -> impl Widget<Data, EventTag>
         .lens(Data::state.chain(MatchLens))
 }
 
-pub fn build(data: &mut Data) -> impl Widget<Data, EventTag>
+pub fn build(data: &mut Data) -> impl Widget<Data, EventTag> + 'static
 {
     let set = Set::new()
         .with(menu().maybe(|data: &mut Data| matches!(data.state, State::Menu)))

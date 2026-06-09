@@ -32,7 +32,7 @@ impl Data
     {
         match event
         {
-            event::Event::Hardware(event::EventPod { used: false, event }) => match event
+            event::Event::Hardware(event::HardwareEventPod { used: false, event }) => match event
             {
                 event::HardwareEvent::Key { key, pressed: true } => match key
                 {
