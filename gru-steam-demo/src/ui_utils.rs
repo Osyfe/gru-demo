@@ -1,5 +1,5 @@
 use super::{data::{State, Data}, game::{Match, Round, Symbol}};
-use gru_ui::{Widget, widget::{WidgetExt, layout::*, primitive::*, compose::*, dynamic::*}, lens::{Lens, LensTuple0, LensTuple1, LensExt}};
+use gru_ui::{Widget, widget::{WidgetExt, layout::*, primitive::*, compose::*}, lens::{Lens, LensTuple0, LensTuple1, LensExt}};
 use std::borrow::Borrow;
 use EventTag::*;
 
@@ -31,12 +31,12 @@ fn menu() -> impl Widget<Data, EventTag>
         .pad().horizontal(1.0).vertical(1.0)
 }
 
-fn lobby() -> impl Widget<Data, EventTag>
+fn lobby(data: &mut Data) -> impl Widget<Data, EventTag>
 {
     Flex::column()
         .with(Label::new().size(2.0).own("Lobby").align().center_h())
         .with(Empty.fix().height(1.0))
-        .with(Dynamic::new(|data: &mut Data|
+        .with(
         {
             let mut list = Flex::column();
             list.add(Label::new().own("Players:"));
@@ -48,7 +48,7 @@ fn lobby() -> impl Widget<Data, EventTag>
                 }
             }
             list
-        }))
+        })
         .with(Empty.fix().height(1.0))
         .with(button("Start Match", StartMatch))
         .with(button("Leave Lobby", LeaveLobby))
@@ -108,11 +108,11 @@ fn game() -> impl Widget<Data, EventTag>
         .lens(Data::state.chain(MatchLens))
 }
 
-pub fn build() -> impl Widget<Data, EventTag>
+pub fn build(data: &mut Data) -> impl Widget<Data, EventTag>
 {
     let set = Set::new()
         .with(menu().maybe(|data: &mut Data| matches!(data.state, State::Menu)))
-        .with(lobby().maybe(|data: &mut Data| matches!(data.state, State::Lobby(_, _))))
+        .with(lobby(data).maybe(|data: &mut Data| matches!(data.state, State::Lobby(_, _))))
         .with(game().maybe(|data: &mut Data| matches!(data.state, State::Match(_, _))));
 
      Flex::column()

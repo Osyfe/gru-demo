@@ -59,8 +59,12 @@ impl App for Demo
         {
             match event
             {
-                event::Event::Hardware(event::EventPod { event: event::HardwareEvent::CloseWindow, used: false }) => return true,
-                _ => {}
+                event::Event::Hardware(event::HardwareEventPod
+                {
+                    event: event::HardwareEvent::CloseWindow | event::HardwareEvent::Key { key: event::Key::Escape, pressed: true },
+                    used: false,
+                }) => return true,
+                _ => {},
             }
         }
         self.cam.input(ui_frame.events);

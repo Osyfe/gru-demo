@@ -28,7 +28,7 @@ impl Cam
         {
             match event
             {
-                event::Event::Hardware(event::EventPod { event, used: false }) => match event
+                event::Event::Hardware(event::HardwareEventPod { event, used: false }) => match event
                 {
                     event::HardwareEvent::PointerClicked { pos: _, button: event::MouseButton::Secondary, pressed } => self.moving = *pressed,
                     event::HardwareEvent::PointerMoved { pos: _, delta } => if self.moving

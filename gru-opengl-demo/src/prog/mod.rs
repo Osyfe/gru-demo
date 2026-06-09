@@ -1,6 +1,6 @@
 use gru_opengl::{log, App, Context, gl::*, event, ui::Binding as UiBinding, resource::{ResSys, ResourceSystem}};
 use gru_misc::{math::*, text_sdf::*};
-use gru_ui::{self as ui, lens::Lens};
+use gru_ui::{self as ui, lens::Lens, widget::WidgetExt};
 use ui::event::*;
 
 mod cube;
@@ -73,10 +73,9 @@ impl App for Demo
                 float: 0.5,
             };
             let ui_binding = UiBinding::new(gl);
-            let widget = ui();
             let font = Font::new(include_bytes!("../res/Latinia.ttf"));
             let ui_init = ui::UiInit::new(font);
-            let ui = ui::Ui::new(ui_init, widget);
+            let ui = ui::Ui::new(ui_init, |_, _| ui().boxed());
 
             (ui_data, ui, ui_binding)
         };
